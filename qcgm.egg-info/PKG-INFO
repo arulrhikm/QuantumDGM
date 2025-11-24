@@ -1,0 +1,90 @@
+Metadata-Version: 2.4
+Name: qcgm
+Version: 0.1.0
+Summary: Quantum Circuits for Discrete Graphical Models
+Home-page: https://github.com/yourusername/qcgm
+Author: Based on Piatkowski & Zoufal (2022)
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Physics
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: qiskit>=0.39.0
+Requires-Dist: qiskit-aer>=0.11.0
+Requires-Dist: scipy>=1.7.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=3.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: flake8>=4.0.0; extra == "dev"
+Requires-Dist: mypy>=0.950; extra == "dev"
+Provides-Extra: viz
+Requires-Dist: matplotlib>=3.5.0; extra == "viz"
+Requires-Dist: seaborn>=0.11.0; extra == "viz"
+Provides-Extra: notebooks
+Requires-Dist: jupyter>=1.0.0; extra == "notebooks"
+Requires-Dist: ipywidgets>=7.7.0; extra == "notebooks"
+Dynamic: author
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Quantum Circuits for Discrete Graphical Models
+
+Implementation of the methods proposed in  
+**“On Quantum Circuits for Discrete Graphical Models”**  
+by *Nico Piatkowski* and *Christa Zoufal*.
+
+This repository provides a quantum algorithm for **unbiased and independent sampling**, **learning**, and **inference** from **discrete graphical models** using **quantum circuits**. The approach is compatible with **multi-body interactions** and can be executed on **current quantum hardware**.
+
+---
+
+## 🚀 Overview
+
+Graphical models are powerful tools for describing structured, high-dimensional probability distributions.  
+Sampling from such models—especially those with discrete variables—poses significant computational challenges.
+
+This project implements a **quantum circuit-based method** that:
+
+- Generates **unbiased, independent samples** from general discrete factor models  
+- Embeds graphical models into **unitary operators** with provable guarantees  
+- Supports **maximum likelihood estimation (MLE)** and **maximum a posteriori (MAP)** inference  
+- Is compatible with **modern hybrid quantum-classical optimization techniques**  
+
+The algorithm’s **success probability** is independent of the number of variables, and it provides a **unitary Hammersley–Clifford theorem**, establishing factorization over cliques of the model’s conditional independence structure.
+
+---
+
+## 🧠 Key Features
+
+- ✅ Provably unbiased sampling from discrete graphical models  
+- ⚙️ Unitary embedding of model factors  
+- 🔁 Hybrid quantum-classical training for parameter learning  
+- 🧩 Support for multi-body interactions  
+- 🧮 Runnable on current quantum processors and simulators  
+- 📈 Includes experiments on quantum simulation and real hardware  
+
+---
+
+## 🧰 Installation
+
+```bash
+# Clone this repository
+git clone https://github.com/<your-username>/quantum-graphical-models.git
+cd quantum-graphical-models
+
+# Install dependencies
+pip install -r requirements.txt

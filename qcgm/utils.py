@@ -1,10 +1,9 @@
 """
-utils.py - FIXED VERSION
+utils.py
 =========================
 
 Utility functions for comparing distributions and analyzing results.
 
-Fixed: NumPy 2.0 compatibility issues
 """
 
 import numpy as np

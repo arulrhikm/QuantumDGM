@@ -1,11 +1,9 @@
 """
-model.py - FIXED VERSION for NumPy 2.0
+model.py
 ========================================
 
 Discrete graphical model representation and exact inference.
 Implements the exponential family formulation from Equations (1)-(2).
-
-Fixed: NumPy 2.0 compatibility issues with np.sum() and np.diag()
 """
 
 import numpy as np

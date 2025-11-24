@@ -1,5 +1,5 @@
 """
-circuit.py - FINAL WORKING VERSION
+circuit.py
 ===================================
 
 This version explicitly manages all registers to avoid Qiskit auto-creation issues.
@@ -14,7 +14,7 @@ from qiskit.circuit.library import Initialize
 
 class QuantumCircuitBuilder:
     """
-    Quantum circuit builder - GUARANTEED WORKING VERSION.
+    Quantum circuit builder
     """
     
     @staticmethod
@@ -22,7 +22,7 @@ class QuantumCircuitBuilder:
         """
         Build circuit using direct state initialization.
         
-        CRITICAL FIX: Must reorder probabilities to match Qiskit's qubit ordering!
+        Must reorder probabilities to match Qiskit's qubit ordering!
         
         The issue:
         - Model orders states as: (v0,v1,v2,...) with itertools.product([0,1], repeat=n)

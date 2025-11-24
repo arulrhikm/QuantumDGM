@@ -4,8 +4,6 @@ visualization.py
 
 Visualization utilities for quantum circuits and graphical models.
 
-This module requires matplotlib and networkx to be installed:
-    pip install matplotlib networkx
 """
 
 import numpy as np

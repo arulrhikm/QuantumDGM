@@ -355,18 +355,6 @@ plt.show()
 
 ## 🧪 Testing
 
-### Run All Tests
-
-```bash
-# Run comprehensive test suite
-python tests/test_qcgm.py
-
-# Run specific test modules
-python -m pytest tests/test_model.py
-python -m pytest tests/test_circuit.py
-python -m pytest tests/test_sampler.py
-```
-
 ### Quick Circuit Test
 
 ```python
@@ -409,14 +397,6 @@ samples, info = sampler.sample_with_retry(
 print(f"Attempts: {info['attempts']}")
 print(f"Success rate: {info['success_rate']:.4f}")
 ```
-
-### Recommended Settings
-
-| Model Size | Cliques | Recommended Shots | Expected Success Rate |
-|-----------|---------|-------------------|----------------------|
-| Small (n≤3) | 1-2 | 1,000 - 5,000 | ~50% - 25% |
-| Medium (n≤5) | 2-3 | 5,000 - 20,000 | ~25% - 12% |
-| Large (n>5) | 3-4 | 20,000+ | ~12% - 6% |
 
 ### Simplified vs Full Circuit
 
@@ -504,7 +484,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Contact
 
 - **Issues**: [GitHub Issues](https://github.com/arulrhikm/qcgm/issues)
-- **Email**: arulm@andrew.cmu.edu
+- **Email**: arulm@andrew.cmu.edu, bryanzha@andrew.cmu.edu
 - **Paper**: https://arxiv.org/abs/2206.00398
 
 ---

@@ -1,9 +1,6 @@
 """
-sampler.py - FULLY CORRECTED
+sampler.py
 =============================
-
-The issue was: simplified circuit has NO auxiliary qubits, but parsing
-logic was expecting them!
 """
 
 import numpy as np
@@ -16,7 +13,7 @@ class QCGMSampler:
     """
     Quantum sampler for discrete graphical models.
     
-    FULLY CORRECTED: Handles both simplified and full circuits properly.
+    Handles both simplified and full circuits properly.
     """
     
     def __init__(self, model):

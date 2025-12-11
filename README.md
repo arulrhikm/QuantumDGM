@@ -153,7 +153,6 @@ print(f"Method used: {info['method']}")
 
 | Document | Description |
 |----------|-------------|
-
 | [Examples Guide](examples/README.md) | Organized demonstrations with research direction |
 | [Implementation Summary](examples/tests/IMPLEMENTATION_SUMMARY.md) | Technical details and test results |
 

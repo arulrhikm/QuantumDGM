@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+include requirements.txt
+recursive-include docs *
+recursive-include examples *
+global-exclude *.py[cod] __pycache__ *.so .DS_Store

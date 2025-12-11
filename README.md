@@ -33,6 +33,12 @@ A Python library for sampling from discrete graphical models using quantum circu
 
 ## 🚀 Installation
 
+### From PyPI (Recommended)
+
+```bash
+pip install QuantumDGM
+```
+
 ### From Source
 
 ```bash

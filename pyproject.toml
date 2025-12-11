@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "QuantumDGM"
+dynamic = ["version", "description"]
+authors = [
+    {name = "Arul Rhik Mazumder", email = "arulm@andrew.cmu.edu"},
+    {name = "Bryan Zhang"}
+]
+readme = "README.md"
+license = {text = "MIT License"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+keywords = ["quantum computing", "graphical models", "quantum circuits", "sampling", "qiskit"]
+dependencies = [
+    "numpy>=1.20.0",
+    "qiskit>=1.0.0",
+    "qiskit-aer>=0.13.0",
+    "scipy>=1.7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/arulrhikm/QuantumDGM"
+Documentation = "https://github.com/arulrhikm/QuantumDGM"
+Repository = "https://github.com/arulrhikm/QuantumDGM"
+Paper = "https://arxiv.org/abs/2206.00398"
+
+[project.optional-dependencies]
+viz = [
+    "matplotlib>=3.5.0,<4.0.0",
+    "networkx>=2.5,<4.0.0",
+    "seaborn>=0.11.0,<1.0.0",
+    "qiskit-ibm-runtime>=0.15.0",
+]
+notebooks = [
+    "jupyter>=1.0.0",
+    "ipywidgets>=7.7.0",
+    "notebook>=6.4.0",
+    "jupyterlab>=3.4.0",
+]
+dev = [
+    "pytest>=7.0.0,<9.0.0",
+    "pytest-cov>=3.0.0,<5.0.0",
+    "pytest-mock>=3.10.0",
+    "black>=22.0.0,<25.0.0",
+    "flake8>=4.0.0,<8.0.0",
+    "isort>=5.10.0",
+    "mypy>=0.950,<2.0.0",
+    "sphinx>=4.5.0",
+    "sphinx-rtd-theme>=1.0.0",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "QuantumDGM.__version__"}
+description = {file = ["README.md"]}

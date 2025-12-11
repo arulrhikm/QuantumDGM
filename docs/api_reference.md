@@ -11,7 +11,7 @@ Complete documentation for all public classes and functions in QuantumDGM.
 Represents a discrete graphical model over binary variables.
 
 ```python
-from qcgm import DiscreteGraphicalModel
+from QuantumDGM import DiscreteGraphicalModel
 
 model = DiscreteGraphicalModel(n_vars=4, cliques=[{0,1}, {1,2}, {2,3}])
 ```
@@ -51,7 +51,7 @@ print(f"Distribution: {probs}")
 Builds exact quantum circuits via amplitude encoding (for n ≤ 10).
 
 ```python
-from qcgm import QuantumCircuitBuilder
+from QuantumDGM import QuantumCircuitBuilder
 
 circuit = QuantumCircuitBuilder.build_circuit(model)
 ```
@@ -72,7 +72,7 @@ circuit = QuantumCircuitBuilder.build_circuit(model)
 Variational circuit builder for large models (n > 10).
 
 ```python
-from qcgm import ApproximateCircuitBuilder
+from QuantumDGM import ApproximateCircuitBuilder
 
 builder = ApproximateCircuitBuilder(depth=3, entanglement='clique')
 circuit, params, info = builder.build_circuit_with_target(model)
@@ -117,7 +117,7 @@ circuit, params, info = builder.build_circuit_with_target(model)
 Main interface for quantum sampling.
 
 ```python
-from qcgm import QCGMSampler
+from QuantumDGM import QCGMSampler
 
 sampler = QCGMSampler(model)
 samples, success_rate = sampler.sample(n_samples=1000)
@@ -145,7 +145,7 @@ samples, success_rate = sampler.sample(n_samples=1000)
 Automatically selects exact or approximate method based on model size.
 
 ```python
-from qcgm import smart_circuit_builder
+from QuantumDGM import smart_circuit_builder
 
 circuit, info = smart_circuit_builder(model, optimize_approx=True, verbose=True)
 print(f"Method used: {info['method']}")  # 'exact' or 'approximate'
@@ -158,7 +158,7 @@ print(f"Method used: {info['method']}")  # 'exact' or 'approximate'
 ### Model Creation
 
 ```python
-from qcgm import create_chain_model, create_star_model, create_complete_model, create_tree_model
+from QuantumDGM import create_chain_model, create_star_model, create_complete_model, create_tree_model
 
 # Chain: v0 - v1 - v2 - v3 - v4
 chain = create_chain_model(5, low=-2.0, high=-0.5)
@@ -181,7 +181,7 @@ tree = create_tree_model(edges)
 ### Distribution Comparison
 
 ```python
-from qcgm import compute_fidelity, kl_divergence, hellinger_distance, total_variation_distance
+from QuantumDGM import compute_fidelity, kl_divergence, hellinger_distance, total_variation_distance
 
 f = compute_fidelity(p, q)      # Fidelity F(P,Q) ∈ [0,1]
 kl = kl_divergence(p, q)        # KL(P || Q)
@@ -192,7 +192,7 @@ tv = total_variation_distance(p, q)  # TV(P,Q) ∈ [0,1]
 ### Sample Analysis
 
 ```python
-from qcgm import estimate_distribution, compare_distributions, sample_statistics
+from QuantumDGM import estimate_distribution, compare_distributions, sample_statistics
 
 # Convert samples to distribution
 dist = estimate_distribution(samples, n_vars=4)
@@ -208,7 +208,7 @@ stats = sample_statistics(samples)
 ### Other Utilities
 
 ```python
-from qcgm import generate_state_labels, print_comparison
+from QuantumDGM import generate_state_labels, print_comparison
 
 labels = generate_state_labels(3)  # ['000', '001', ..., '111']
 print_comparison(metrics)          # Pretty-print comparison
@@ -221,7 +221,7 @@ print_comparison(metrics)          # Pretty-print comparison
 Available when matplotlib/networkx are installed.
 
 ```python
-from qcgm import (
+from QuantumDGM import (
     visualize_graphical_model,
     visualize_circuit_diagram,
     plot_distribution_comparison,
@@ -243,15 +243,15 @@ from qcgm import (
 ## Configuration
 
 ```python
-import qcgm
+import QuantumDGM
 
 # Set default backend
 from qiskit_aer import AerSimulator
-qcgm.set_default_backend(AerSimulator())
+QuantumDGM.set_default_backend(AerSimulator())
 
 # Check dependencies
-qcgm.print_dependency_status()
+QuantumDGM.print_dependency_status()
 
 # Package info
-qcgm.info()
+QuantumDGM.info()
 ```

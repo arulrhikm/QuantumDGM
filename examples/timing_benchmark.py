@@ -14,7 +14,7 @@ Generates data for Table in Section 5.3.1
 
 import numpy as np
 import time
-from qcgm import DiscreteGraphicalModel, QCGMSampler, estimate_distribution
+from QuantumDGM import DiscreteGraphicalModel, QCGMSampler, estimate_distribution
 import itertools
 
 print('=' * 80)

@@ -15,9 +15,9 @@ examples/
 │   ├── variational_training_demo.py   # Large-model training demonstration
 │
 ├── 📊 figures/                        # Generated visualizations
-│   ├── fair_comparison.png
+│   ├── sampling_methods_comparison.png
 │   ├── quantum_properties.png
-│   ├── unfair_comparison.png
+│   ├── gibbs_comparison_explained.png
 │   ├── when_quantum_matters.png
 │   ├── variational_training_convergence.png
 │   └── model_*.png, circuit_*.png
@@ -75,9 +75,9 @@ python quantum_vs_classical_demo.py
 **Research Question:** *What are the REAL advantages of quantum sampling?*
 
 **What it demonstrates:**
-1. **Fair Comparison**: When all methods know P(x), quantum ≈ classical
+1. **Equal-Information Comparison**: When all methods know P(x), quantum ≈ classical
 2. **Quantum Properties**: Independence, no burn-in, high ESS
-3. **Unfair Comparison Explained**: Why Gibbs seems worse (solving different problems!)
+3. **Gibbs Comparison Explained**: Why Gibbs seems worse (solving different problems!)
 4. **When Quantum Matters**: Real use cases where properties help
 
 **Key Insight:** The simplified amplitude encoding doesn't give computational advantage,
@@ -178,10 +178,10 @@ This package addresses key challenges in quantum machine learning for graphical 
 
 | Optimization | Status | Impact | Location |
 |-------------|--------|---------|----------|
-| **Sparse Diagonal Hamiltonian** | ✅ Complete | O(4^n) → O(2^n) memory | `qcgm/model.py` |
-| **Probability Caching** | ✅ Complete | 1000x+ speedup | `qcgm/model.py` |
-| **Variational Compression** | ✅ Complete | Enables n>10 | `qcgm/circuit.py` |
-| **Smart Circuit Selection** | ✅ Complete | Automatic optimization | `qcgm/circuit.py` |
+| **Sparse Diagonal Hamiltonian** | ✅ Complete | O(4^n) → O(2^n) memory | `QuantumDGM/model.py` |
+| **Probability Caching** | ✅ Complete | 1000x+ speedup | `QuantumDGM/model.py` |
+| **Variational Compression** | ✅ Complete | Enables n>10 | `QuantumDGM/circuit.py` |
+| **Smart Circuit Selection** | ✅ Complete | Automatic optimization | `QuantumDGM/circuit.py` |
 
 ### 🎯 **Research Proposal Alignment**
 
@@ -214,7 +214,7 @@ From the research objectives:
 
 **Status:** ✅ **COMPLETE** (with caveats)
 - ✅ Honest comparison framework
-- ✅ Fair vs unfair comparisons explained
+- ✅ Equal-info vs different-problem comparisons explained
 - ✅ When quantum properties matter
 - ⚠️ Note: Current implementation is pedagogical, not full QCGM
 
@@ -252,7 +252,7 @@ From the research objectives:
 2. **Hybrid Rejection Sampling** (Medium, 4-6 hours)
    - Combine quantum + classical samples
    - Better sample efficiency when success rate < 50%
-   - Foundation exists in `qcgm/sampler.py`
+   - Foundation exists in `QuantumDGM/sampler.py`
 
 3. **Clique-Based Entanglement Optimization** (Medium, 3-4 hours)
    - Use chromatic number χ(G) for optimal depth

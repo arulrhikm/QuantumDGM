@@ -366,7 +366,7 @@ class ApproximateCircuitBuilder:
         final_probs_reordered = self._reorder_probs_from_qiskit(final_probs, n)
         
         # Compute fidelity for info
-        from qcgm.utils import compute_fidelity
+        from QuantumDGM.utils import compute_fidelity
         final_fidelity = compute_fidelity(target_probs, final_probs_reordered)
         
         info = {
@@ -520,7 +520,7 @@ def quick_test():
     print("Quick Circuit Test")
     print("=" * 60)
     
-    from qcgm.model import DiscreteGraphicalModel
+    from QuantumDGM.model import DiscreteGraphicalModel
     from qiskit_aer import AerSimulator
     
     # Create model
@@ -555,7 +555,7 @@ def quick_test():
     print(f"Parsed {len(samples)} samples")
     
     # Estimate
-    from qcgm.utils import estimate_distribution, compute_fidelity
+    from QuantumDGM.utils import estimate_distribution, compute_fidelity
     if len(samples) > 0:
         samples = np.array(samples)
         est_probs = estimate_distribution(samples, model.n_vars)

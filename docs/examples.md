@@ -45,9 +45,9 @@ python quantum_vs_classical_demo.py
 ```
 
 **Topics Covered:**
-1. **Fair Comparison**: When both methods know P(x)
+1. **Equal-Information Comparison**: When both methods know P(x)
 2. **Quantum Properties**: Independence, no burn-in
-3. **Unfair Comparison Explained**: Why Gibbs comparison is misleading
+3. **Gibbs Comparison Explained**: Why Gibbs comparison is misleading
 4. **When Quantum Matters**: Real use cases
 
 ---
@@ -142,7 +142,7 @@ python examples/tests/test_optimizations.py
 ### Basic Quantum Sampling
 
 ```python
-from qcgm import DiscreteGraphicalModel, QCGMSampler
+from QuantumDGM import DiscreteGraphicalModel, QCGMSampler
 
 # Create model
 model = DiscreteGraphicalModel(4, [{0,1}, {1,2}, {2,3}])
@@ -160,7 +160,7 @@ print(f"Success rate: {rate:.2%}")
 ### Compare with Exact Distribution
 
 ```python
-from qcgm import estimate_distribution, compute_fidelity
+from QuantumDGM import estimate_distribution, compute_fidelity
 
 exact = model.compute_probabilities()
 empirical = estimate_distribution(samples, model.n_vars)
@@ -174,7 +174,7 @@ print(f"Fidelity: {fidelity:.4f}")
 ### Variational Training
 
 ```python
-from qcgm import ApproximateCircuitBuilder
+from QuantumDGM import ApproximateCircuitBuilder
 
 model = DiscreteGraphicalModel(12, [{i, i+1} for i in range(11)])
 model.set_random_parameters()
@@ -192,7 +192,7 @@ circuit, params, info = builder.build_circuit_with_target(
 ### Visualization
 
 ```python
-from qcgm import visualize_graphical_model, plot_distribution_comparison
+from QuantumDGM import visualize_graphical_model, plot_distribution_comparison
 
 # Model structure
 fig1 = visualize_graphical_model(model)

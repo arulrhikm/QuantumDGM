@@ -1,18 +1,18 @@
 """
-demo_script.py - Complete test of QCGM implementation
+demo_script.py - Complete test of QuantumDGM implementation
 ====================================================
 
-Run this to verify your QCGM implementation works correctly.
+Run this to verify your QuantumDGM implementation works correctly.
 """
 
 import numpy as np
 from qiskit_aer import AerSimulator
 
-# Import your QCGM modules
-from qcgm.model import DiscreteGraphicalModel
-from qcgm.circuit import QuantumCircuitBuilder
-from qcgm.sampler import QCGMSampler
-from qcgm.utils import (
+# Import your QuantumDGM modules
+from QuantumDGM.model import DiscreteGraphicalModel
+from QuantumDGM.circuit import QuantumCircuitBuilder
+from QuantumDGM.sampler import QCGMSampler
+from QuantumDGM.utils import (
     compute_fidelity,
     estimate_distribution,
     compare_distributions,
@@ -187,7 +187,7 @@ def test_different_structures():
 def run_all_tests():
     """Run all tests and report results."""
     print("\n" + "=" * 70)
-    print("QCGM IMPLEMENTATION TEST SUITE")
+    print("QuantumDGM IMPLEMENTATION TEST SUITE")
     print("=" * 70)
     
     tests = [
@@ -226,7 +226,7 @@ def run_all_tests():
     print(f"\n{total_passed}/{total_tests} tests passed")
     
     if total_passed == total_tests:
-        print("\n🎉 ALL TESTS PASSED! Your QCGM implementation is working!")
+        print("\n🎉 ALL TESTS PASSED! Your QuantumDGM implementation is working!")
         return True
     else:
         print(f"\n⚠️  {total_tests - total_passed} test(s) failed")

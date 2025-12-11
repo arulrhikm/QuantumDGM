@@ -164,7 +164,7 @@ circuit, info = smart_circuit_builder(model, optimize_approx=True)
 
 ### Example 1: Basic Usage
 ```python
-from qcgm import DiscreteGraphicalModel, ApproximateCircuitBuilder
+from QuantumDGM import DiscreteGraphicalModel, ApproximateCircuitBuilder
 
 model = DiscreteGraphicalModel(10, [{i,i+1} for i in range(9)])
 model.set_random_parameters()
@@ -181,7 +181,7 @@ print(f"Fidelity: {info['final_fidelity']:.4f}")
 
 ### Example 2: Automatic Selection
 ```python
-from qcgm import smart_circuit_builder
+from QuantumDGM import smart_circuit_builder
 
 # Automatically uses exact for n≤10, approximate for n>10
 circuit, info = smart_circuit_builder(

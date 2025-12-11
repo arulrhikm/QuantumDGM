@@ -63,7 +63,7 @@ pip install -e .
 ### Basic Usage (n ≤ 10 variables)
 
 ```python
-from qcgm import DiscreteGraphicalModel, QCGMSampler
+from QuantumDGM import DiscreteGraphicalModel, QCGMSampler
 
 # Create a graphical model (chain structure)
 model = DiscreteGraphicalModel(n_vars=4, cliques=[{0,1}, {1,2}, {2,3}])
@@ -80,7 +80,7 @@ print(f"Success rate: {success_rate:.4f}")
 ### Large Models (n > 10 variables) - Variational Training
 
 ```python
-from qcgm import DiscreteGraphicalModel, ApproximateCircuitBuilder
+from QuantumDGM import DiscreteGraphicalModel, ApproximateCircuitBuilder
 
 # Create a larger model
 model = DiscreteGraphicalModel(12, [{i, i+1} for i in range(11)])
@@ -100,7 +100,7 @@ print(f"Final fidelity: {info['final_fidelity']:.4f}")
 ### Automatic Method Selection
 
 ```python
-from qcgm import smart_circuit_builder
+from QuantumDGM import smart_circuit_builder
 
 # Automatically chooses exact (n≤10) or approximate (n>10)
 circuit, info = smart_circuit_builder(
@@ -138,7 +138,7 @@ print(f"Method used: {info['method']}")
 
 ### 4. Honest Research Framework
 
-- **Fair comparisons**: Quantum vs classical with equal information
+- **Honest comparisons**: Quantum vs classical with equal information
 - **Transparent limitations**: Pedagogical vs full QCGM implementation
 - **Reproducible results**: All tests passing, comprehensive documentation
 
@@ -176,8 +176,8 @@ circuit, params, info = builder.build_circuit_with_target(model)
 
 **Utility Functions**
 ```python
-from qcgm import compute_fidelity, estimate_distribution, generate_state_labels
-from qcgm import create_chain_model, create_star_model  # Convenience functions
+from QuantumDGM import compute_fidelity, estimate_distribution, generate_state_labels
+from QuantumDGM import create_chain_model, create_star_model  # Convenience functions
 ```
 
 ---
@@ -305,9 +305,9 @@ where:
 
 Our [quantum vs classical demo](examples/quantum_vs_classical_demo.py) provides:
 
-1. **Fair Comparison**: When all methods know P(x), quantum ≈ classical
+1. **Equal-Information Comparison**: When all methods know P(x), quantum ≈ classical
 2. **Quantum Properties**: Independence, no burn-in, high effective sample size
-3. **Unfair Comparison Explained**: Why comparing to Gibbs is misleading
+3. **Gibbs Comparison Explained**: Why comparing to Gibbs is misleading
 4. **When Quantum Matters**: Real use cases where properties help
 
 **Key Insight:** The simplified amplitude encoding doesn't give computational advantage,

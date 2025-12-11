@@ -77,7 +77,7 @@ v0 — v1 — v2 — v3 — v4
 Cliques: {0,1}, {1,2}, {2,3}, {3,4}
 
 ```python
-from qcgm import create_chain_model
+from QuantumDGM import create_chain_model
 model = create_chain_model(5)
 ```
 
@@ -94,7 +94,7 @@ v4 — v0 — v2
 Cliques: {0,1}, {0,2}, {0,3}, {0,4}
 
 ```python
-from qcgm import create_star_model
+from QuantumDGM import create_star_model
 model = create_star_model(5, center=0)
 ```
 
@@ -109,7 +109,7 @@ v3 — v2
 Cliques: {0,1}, {1,2}, {2,3}, {3,0}
 
 ```python
-from qcgm import DiscreteGraphicalModel
+from QuantumDGM import DiscreteGraphicalModel
 model = DiscreteGraphicalModel(4, [{0,1}, {1,2}, {2,3}, {3,0}])
 ```
 
@@ -144,7 +144,7 @@ probs = model.compute_probabilities()
 samples = model.sample_exact(n_samples=1000)
 
 # Quantum sampling
-from qcgm import QCGMSampler
+from QuantumDGM import QCGMSampler
 sampler = QCGMSampler(model)
 samples, rate = sampler.sample(n_samples=1000)
 ```

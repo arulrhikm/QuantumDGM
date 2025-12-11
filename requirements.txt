@@ -1,5 +1,5 @@
 # ====================================================================
-# QCGM: Quantum Circuits for Discrete Graphical Models
+# QuantumDGM: Quantum Circuits for Discrete Graphical Models
 # Requirements File
 # ====================================================================
 

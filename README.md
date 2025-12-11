@@ -2,7 +2,6 @@
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Research](https://img.shields.io/badge/Research-Active-green.svg)](docs/RESEARCH_PLAN.md)
 
 A Python library for sampling from discrete graphical models using quantum circuits, based on ["On Quantum Circuits for Discrete Graphical Models"](https://arxiv.org/abs/2206.00398) by Nico Piatkowski and Christa Zoufal (2022).
 
@@ -154,8 +153,7 @@ print(f"Method used: {info['method']}")
 
 | Document | Description |
 |----------|-------------|
-| [API Reference](docs/VARIATIONAL_TRAINING.md) | Complete API documentation for variational training |
-| [Research Plan](docs/RESEARCH_PLAN.md) | Project vision, roadmap, and collaboration opportunities |
+
 | [Examples Guide](examples/README.md) | Organized demonstrations with research direction |
 | [Implementation Summary](examples/tests/IMPLEMENTATION_SUMMARY.md) | Technical details and test results |
 
@@ -229,12 +227,12 @@ python examples/tests/test_optimizations.py
 
 ### Implementation Status
 
-| Research Objective | Status | Documentation |
-|-------------------|--------|---------------|
-| **R1:** Low-Ancilla Circuits | ⚠️ Partial (Simplified) | [Research Plan](docs/RESEARCH_PLAN.md#r1) |
-| **R2:** Hybrid Inference | ❌ Planned | [Research Plan](docs/RESEARCH_PLAN.md#r2) |
-| **R3:** Variational Compression | ✅ **Complete** | [API Docs](docs/VARIATIONAL_TRAINING.md) |
-| **R4:** Quantitative Benchmarks | ✅ **Complete** | [Demo](examples/quantum_vs_classical_demo.py) |
+| Research Objective | Status |
+|-------------------|--------|
+| **R1:** Low-Ancilla Circuits | ⚠️ Partial (Simplified) |
+| **R2:** Hybrid Inference | ❌ Planned |
+| **R3:** Variational Compression | ✅ **Complete** |
+| **R4:** Quantitative Benchmarks | ✅ **Complete** |
 
 **Progress: 50-62% complete** (2/4 objectives fully implemented)
 
@@ -271,7 +269,7 @@ python examples/tests/test_optimizations.py
 8. Hamiltonian gadgets
 9. Scalability studies
 
-See [docs/RESEARCH_PLAN.md](docs/RESEARCH_PLAN.md) for complete details.
+
 
 ---
 
@@ -350,7 +348,7 @@ If you use this library in your research, please cite:
 
 ## 🤝 Contributing
 
-Contributions are welcome! See our [research plan](docs/RESEARCH_PLAN.md) for priority areas:
+Contributions are welcome! Priority areas:
 
 **High-Impact Additions:**
 - Readout error mitigation (easy, 1-2 hours)

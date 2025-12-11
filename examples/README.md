@@ -281,7 +281,6 @@ From the research objectives:
 ## 📖 Related Documentation
 
 - **Main README**: `../README.md` - Package overview and installation
-- **API Documentation**: `../VARIATIONAL_TRAINING.md` - Complete API reference
 - **Implementation Details**: `tests/IMPLEMENTATION_SUMMARY.md` - Technical summary
 - **Research Proposal**: See research objectives in package header
 

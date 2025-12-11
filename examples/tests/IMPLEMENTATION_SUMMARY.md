@@ -23,7 +23,7 @@ Implement a training loop for variational quantum circuits that enables practica
    - Verbose logging system
 
 3. **Documentation**
-   - `VARIATIONAL_TRAINING.md` - Complete API reference and guide
+
    - Inline code documentation
    - Usage examples with multiple scenarios
 
@@ -221,7 +221,7 @@ From the research proposal, this implements:
 ## 📝 Files Created/Modified
 
 ### New Files
-- `VARIATIONAL_TRAINING.md` - Complete API documentation
+
 - `examples/test_variational_training.py` - Comprehensive test suite
 - `examples/variational_training_demo.py` - Usage demonstrations
 - `examples/IMPLEMENTATION_SUMMARY.md` - This file

@@ -29,10 +29,10 @@ def get_long_description():
 
 # Core dependencies
 INSTALL_REQUIRES = [
-    'numpy>=1.20.0,<2.0.0',
-    'qiskit>=0.39.0,<2.0.0',
-    'qiskit-aer>=0.11.0,<1.0.0',
-    'scipy>=1.7.0,<2.0.0',
+    'numpy>=1.20.0',
+    'qiskit>=1.0.0',
+    'qiskit-aer>=0.13.0',
+    'scipy>=1.7.0',
 ]
 
 # Optional dependencies

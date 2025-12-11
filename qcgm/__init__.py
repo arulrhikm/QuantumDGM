@@ -74,7 +74,7 @@ __paper__ = "https://arxiv.org/abs/2206.00398"
 # Import main classes
 from .statistics import PauliMarkovStatistics
 from .model import DiscreteGraphicalModel
-from .circuit import QuantumCircuitBuilder
+from .circuit import QuantumCircuitBuilder, ApproximateCircuitBuilder, smart_circuit_builder
 from .sampler import QCGMSampler
 
 # Import commonly used utility functions
@@ -115,7 +115,11 @@ __all__ = [
     'PauliMarkovStatistics',
     'DiscreteGraphicalModel',
     'QuantumCircuitBuilder',
+    'ApproximateCircuitBuilder',
     'QCGMSampler',
+    
+    # Smart builders
+    'smart_circuit_builder',
     
     # Utility functions
     'compute_fidelity',

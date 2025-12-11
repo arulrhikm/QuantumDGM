@@ -179,7 +179,7 @@ def visualize_circuit_diagram(model,
         ax.plot([8.9, 9.1], [i, i+0.2], 'k-', linewidth=1.5)
         
         # Classical bit connection
-        ax.plot([9.3, 10], [i, i], 'k-', linewidth=2, linestyle='--')
+        ax.plot([9.3, 10], [i, i], 'k--', linewidth=2)
     
     # Add annotations
     ax.text(5, n_qubits + 0.5, 

@@ -6,14 +6,10 @@ qcgm/model.py
 qcgm/sampler.py
 qcgm/statistics.py
 qcgm/utils.py
+qcgm/visualization.py
 qcgm.egg-info/PKG-INFO
 qcgm.egg-info/SOURCES.txt
 qcgm.egg-info/dependency_links.txt
+qcgm.egg-info/not-zip-safe
 qcgm.egg-info/requires.txt
 qcgm.egg-info/top_level.txt
-tests/__init__.py
-tests/test_circuit.py
-tests/test_model.py
-tests/test_sampler.py
-tests/test_statistics.py
-tests/test_utils.py

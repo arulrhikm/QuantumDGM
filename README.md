@@ -37,7 +37,7 @@ A Python library for sampling from discrete graphical models using quantum circu
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/QuantumDGM.git
+git clone https://github.com/arulrhikm/QuantumDGM.git
 cd QuantumDGM
 
 # Install dependencies
@@ -353,7 +353,7 @@ Contributions are welcome! See our [research plan](docs/RESEARCH_PLAN.md) for pr
 
 **Development Setup:**
 ```bash
-git clone https://github.com/yourusername/QuantumDGM.git
+git clone https://github.com/arulrhikm/QuantumDGM.git
 cd QuantumDGM
 pip install -e ".[dev]"
 
@@ -380,10 +380,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Contact
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/QuantumDGM/issues)
+- **Issues**: [GitHub Issues](https://github.com/arulrhikm/QuantumDGM/issues)
 - **Email**: arulm@andrew.cmu.edu
-- **Research Paper**: https://arxiv.org/abs/2206.00398
-- **Documentation**: [docs/](docs/)
 
 ---
 

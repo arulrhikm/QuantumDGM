@@ -12,7 +12,7 @@ Tests:
 
 import numpy as np
 import matplotlib.pyplot as plt
-from qcgm import DiscreteGraphicalModel, ApproximateCircuitBuilder, compute_fidelity
+from QuantumDGM import DiscreteGraphicalModel, ApproximateCircuitBuilder, compute_fidelity
 
 print('=' * 80)
 print('VARIATIONAL CIRCUIT TRAINING TESTS')
@@ -127,7 +127,7 @@ model_simple.set_parameters(params_dict)
 target_probs_simple = model_simple.compute_probabilities()
 
 print(f'Target distribution (3 variables):')
-from qcgm import generate_state_labels
+from QuantumDGM import generate_state_labels
 labels = generate_state_labels(3)
 for i, (label, prob) in enumerate(zip(labels, target_probs_simple)):
     print(f'  {label}: {prob:.4f}')

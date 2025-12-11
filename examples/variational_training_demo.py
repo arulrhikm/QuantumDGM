@@ -6,7 +6,7 @@ for models too large for exact amplitude encoding.
 """
 
 import numpy as np
-from qcgm import (
+from QuantumDGM import (
     DiscreteGraphicalModel, 
     ApproximateCircuitBuilder,
     smart_circuit_builder,

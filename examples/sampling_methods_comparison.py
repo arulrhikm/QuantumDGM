@@ -1,12 +1,17 @@
 """
-FAIR COMPARISON: Generate clean 1×3 comparison figure
-Creates fair_comparison.png (no title, publication ready)
+SAMPLING METHODS COMPARISON: Generate clean 1×3 comparison figure
+Creates sampling_methods_comparison.png (no title, publication ready)
 """
 
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import itertools
-from qcgm import DiscreteGraphicalModel, QCGMSampler, compute_fidelity, estimate_distribution, generate_state_labels
+from QuantumDGM import DiscreteGraphicalModel, QCGMSampler, compute_fidelity, estimate_distribution, generate_state_labels
+
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+FIGURES_DIR = os.path.join(SCRIPT_DIR, 'figures')
 
 def create_demo_model(seed=42):
     """Create a small demo model for visualization"""
@@ -15,7 +20,7 @@ def create_demo_model(seed=42):
     return model
 
 print("=" * 80)
-print("   FAIR COMPARISON: Methods with Equal Information")
+print("   SAMPLING METHODS COMPARISON: Quantum vs Classical")
 print("=" * 80)
 
 model = create_demo_model(seed=42)
@@ -90,8 +95,10 @@ for idx, (name, probs, fid, color) in enumerate(methods):
             bbox=dict(boxstyle='round,pad=0.5', facecolor='white', 
                      edgecolor=color, linewidth=2, alpha=0.9))
 
-plt.savefig('examples/figures/fair_comparison.png', dpi=200, bbox_inches='tight', pad_inches=0.3)
-print('  ✓ Saved: fair_comparison.png')
+output_path = os.path.join(FIGURES_DIR, 'sampling_methods_comparison.png')
+os.makedirs(FIGURES_DIR, exist_ok=True)
+plt.savefig(output_path, dpi=200, bbox_inches='tight', pad_inches=0.3)
+print(f'  ✓ Saved: {output_path}')
 
 plt.show()
 

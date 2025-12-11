@@ -1,6 +1,6 @@
 """
-QCGM: Quantum Circuits for Discrete Graphical Models
-=====================================================
+QuantumDGM: Quantum Circuits for Discrete Graphical Models
+===========================================================
 
 A Python library for sampling from discrete graphical models using quantum circuits.
 
@@ -18,7 +18,7 @@ Key Features
 
 Quick Start
 -----------
->>> from qcgm import DiscreteGraphicalModel, QCGMSampler
+>>> from QuantumDGM import DiscreteGraphicalModel, QCGMSampler
 >>> 
 >>> # Create a graphical model
 >>> model = DiscreteGraphicalModel(n_vars=3, cliques=[{0, 1}, {1, 2}])
@@ -68,7 +68,7 @@ compare_distributions
 __version__ = "0.1.0"
 __author__ = "Based on Piatkowski & Zoufal (2022)"
 __license__ = "MIT"
-__url__ = "https://github.com/yourusername/qcgm"
+__url__ = "https://github.com/arulrhikm/QuantumDGM"
 __paper__ = "https://arxiv.org/abs/2206.00398"
 
 # Import main classes
@@ -264,8 +264,8 @@ def set_default_backend(backend):
     
     Example:
         >>> from qiskit_aer import AerSimulator
-        >>> import qcgm
-        >>> qcgm.set_default_backend(AerSimulator())
+        >>> import QuantumDGM
+        >>> QuantumDGM.set_default_backend(AerSimulator())
     """
     global _default_backend
     _default_backend = backend
@@ -358,7 +358,7 @@ def print_dependency_status():
     status = check_dependencies()
     
     print("=" * 60)
-    print("QCGM Dependency Status")
+    print("QuantumDGM Dependency Status")
     print("=" * 60)
     
     for name, info in status.items():
@@ -388,7 +388,7 @@ def info():
     Print package information.
     """
     print("=" * 70)
-    print("QCGM: Quantum Circuits for Discrete Graphical Models")
+    print("QuantumDGM: Quantum Circuits for Discrete Graphical Models")
     print("=" * 70)
     print(f"Version:        {__version__}")
     print(f"Author:         {__author__}")
@@ -412,20 +412,20 @@ def info():
         print("  - Visualization:           Not available (install matplotlib)")
     print()
     print("Quick Start:")
-    print("  >>> from qcgm import DiscreteGraphicalModel, QCGMSampler")
+    print("  >>> from QuantumDGM import DiscreteGraphicalModel, QCGMSampler")
     print("  >>> model = DiscreteGraphicalModel(3, [{0,1}, {1,2}])")
     print("  >>> model.set_random_parameters()")
     print("  >>> sampler = QCGMSampler(model)")
     print("  >>> samples, rate = sampler.sample(n_samples=1000)")
     print()
     print("Convenience Functions:")
-    print("  >>> from qcgm import create_chain_model, create_star_model")
+    print("  >>> from QuantumDGM import create_chain_model, create_star_model")
     print("  >>> chain = create_chain_model(5)")
     print("  >>> star = create_star_model(5, center=0)")
     print()
     if _HAS_VISUALIZATION:
         print("Visualization:")
-        print("  >>> from qcgm import visualize_graphical_model")
+        print("  >>> from QuantumDGM import visualize_graphical_model")
         print("  >>> fig = visualize_graphical_model(model)")
         print("  >>> plt.show()")
         print()

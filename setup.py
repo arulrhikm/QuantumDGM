@@ -1,8 +1,8 @@
 """
-Setup script for QCGM package.
+Setup script for QuantumDGM package.
 
 Install with:
-    pip install .
+    pip install git+https://github.com/arulrhikm/QuantumDGM.git
     pip install -e .  # Development mode
     pip install .[viz]  # With visualization
     pip install .[dev]  # With development tools
@@ -13,7 +13,7 @@ import os
 
 # Read version from __init__.py
 def get_version():
-    init_file = os.path.join('qcgm', '__init__.py')
+    init_file = os.path.join('QuantumDGM', '__init__.py')
     with open(init_file, 'r') as f:
         for line in f:
             if line.startswith('__version__'):
@@ -71,17 +71,17 @@ EXTRAS_REQUIRE = {
 EXTRAS_REQUIRE['all'] = sum(EXTRAS_REQUIRE.values(), [])
 
 setup(
-    name='qcgm',
+    name='QuantumDGM',
     version=get_version(),
-    author='Based on Piatkowski & Zoufal (2022)',
-    author_email='your.email@example.com',
+    author='Arul Rhik Mazumder, Bryan Zhang',
+    author_email='arulm@andrew.cmu.edu',
     description='Quantum Circuits for Discrete Graphical Models',
     long_description=get_long_description(),
     long_description_content_type='text/markdown',
-    url='https://github.com/yourusername/qcgm',
+    url='https://github.com/arulrhikm/QuantumDGM',
     project_urls={
-        'Documentation': 'https://github.com/yourusername/qcgm',
-        'Source': 'https://github.com/yourusername/qcgm',
+        'Documentation': 'https://github.com/arulrhikm/QuantumDGM',
+        'Source': 'https://github.com/arulrhikm/QuantumDGM',
         'Paper': 'https://arxiv.org/abs/2206.00398',
     },
     packages=find_packages(exclude=['tests', 'examples', 'docs']),

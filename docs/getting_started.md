@@ -33,7 +33,7 @@ pip install -e .
 ### Verify Installation
 
 ```python
-import qcgm
+import QuantumDGM
 qcgm.print_dependency_status()
 ```
 
@@ -44,7 +44,7 @@ qcgm.print_dependency_status()
 ### Basic Sampling (n ≤ 10 variables)
 
 ```python
-from qcgm import DiscreteGraphicalModel, QCGMSampler
+from QuantumDGM import DiscreteGraphicalModel, QCGMSampler
 
 # Create a graphical model (chain structure)
 model = DiscreteGraphicalModel(n_vars=4, cliques=[{0,1}, {1,2}, {2,3}])
@@ -61,7 +61,7 @@ print(f"Success rate: {success_rate:.4f}")
 ### Large Models (n > 10) - Variational Training
 
 ```python
-from qcgm import DiscreteGraphicalModel, ApproximateCircuitBuilder
+from QuantumDGM import DiscreteGraphicalModel, ApproximateCircuitBuilder
 
 # Create a larger model
 model = DiscreteGraphicalModel(12, [{i, i+1} for i in range(11)])
@@ -81,7 +81,7 @@ print(f"Final fidelity: {info['final_fidelity']:.4f}")
 ### Convenience Functions
 
 ```python
-from qcgm import create_chain_model, create_star_model
+from QuantumDGM import create_chain_model, create_star_model
 
 # Quick model creation
 chain = create_chain_model(5, low=-2.0, high=-0.5)
@@ -95,8 +95,8 @@ star = create_star_model(5, center=0)
 ### 1. Compare Quantum vs Exact Sampling
 
 ```python
-from qcgm import DiscreteGraphicalModel, QCGMSampler
-from qcgm import estimate_distribution, compute_fidelity
+from QuantumDGM import DiscreteGraphicalModel, QCGMSampler
+from QuantumDGM import estimate_distribution, compute_fidelity
 
 model = DiscreteGraphicalModel(4, [{0,1}, {1,2}, {2,3}])
 model.set_random_parameters()
@@ -117,7 +117,7 @@ print(f"Fidelity: {fidelity:.4f}")
 ### 2. Visualize Model Structure
 
 ```python
-from qcgm import DiscreteGraphicalModel, visualize_graphical_model
+from QuantumDGM import DiscreteGraphicalModel, visualize_graphical_model
 
 model = DiscreteGraphicalModel(5, [{0,1}, {1,2}, {2,3}, {3,4}, {0,4}])
 model.set_random_parameters()

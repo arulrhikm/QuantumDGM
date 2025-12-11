@@ -30,7 +30,7 @@ The amplitudes are set to √P_θ(x) for each basis state |x⟩.
 ### Usage
 
 ```python
-from qcgm import QuantumCircuitBuilder, DiscreteGraphicalModel
+from QuantumDGM import QuantumCircuitBuilder, DiscreteGraphicalModel
 
 model = DiscreteGraphicalModel(4, [{0,1}, {1,2}, {2,3}])
 model.set_random_parameters()
@@ -78,7 +78,7 @@ Layer 2:    [Ry--Rz]--[Ry--Rz]--[Ry--Rz]--[Ry--Rz]
 ### Usage
 
 ```python
-from qcgm import ApproximateCircuitBuilder, DiscreteGraphicalModel
+from QuantumDGM import ApproximateCircuitBuilder, DiscreteGraphicalModel
 
 model = DiscreteGraphicalModel(12, [{i, i+1} for i in range(11)])
 model.set_random_parameters()
@@ -145,7 +145,7 @@ builder = ApproximateCircuitBuilder(depth=3, entanglement='clique')
 ## Automatic Method Selection
 
 ```python
-from qcgm import smart_circuit_builder
+from QuantumDGM import smart_circuit_builder
 
 circuit, info = smart_circuit_builder(
     model,
@@ -166,7 +166,7 @@ else:
 ### Depth Selection
 
 ```python
-from qcgm import ApproximateCircuitBuilder
+from QuantumDGM import ApproximateCircuitBuilder
 
 # Use heuristic
 depth = ApproximateCircuitBuilder.estimate_optimal_depth(model)

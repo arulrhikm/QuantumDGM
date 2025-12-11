@@ -11,7 +11,7 @@ This document covers utility functions for analysis, comparison, and visualizati
 Compute fidelity between two probability distributions.
 
 ```python
-from qcgm import compute_fidelity
+from QuantumDGM import compute_fidelity
 
 fidelity = compute_fidelity(exact_probs, quantum_probs)
 # Returns value in [0, 1], where 1 = identical
@@ -26,7 +26,7 @@ fidelity = compute_fidelity(exact_probs, quantum_probs)
 Compute KL divergence from Q to P.
 
 ```python
-from qcgm import kl_divergence
+from QuantumDGM import kl_divergence
 
 kl = kl_divergence(target, approximation)
 # KL(P || Q) - not symmetric!
@@ -42,7 +42,7 @@ kl = kl_divergence(target, approximation)
 Compute Hellinger distance.
 
 ```python
-from qcgm import hellinger_distance
+from QuantumDGM import hellinger_distance
 
 h = hellinger_distance(p, q)  # Returns value in [0, 1]
 ```
@@ -56,7 +56,7 @@ h = hellinger_distance(p, q)  # Returns value in [0, 1]
 Compute total variation distance.
 
 ```python
-from qcgm import total_variation_distance
+from QuantumDGM import total_variation_distance
 
 tv = total_variation_distance(p, q)  # Returns value in [0, 1]
 ```
@@ -70,7 +70,7 @@ tv = total_variation_distance(p, q)  # Returns value in [0, 1]
 Comprehensive comparison returning all metrics.
 
 ```python
-from qcgm import compare_distributions, print_comparison
+from QuantumDGM import compare_distributions, print_comparison
 
 metrics = compare_distributions(exact_probs, quantum_probs, 
                                  labels=('Exact', 'Quantum'))
@@ -93,7 +93,7 @@ print_comparison(metrics)
 Convert samples to probability distribution.
 
 ```python
-from qcgm import estimate_distribution
+from QuantumDGM import estimate_distribution
 
 # samples: array of shape (n_samples, n_vars)
 dist = estimate_distribution(samples, n_vars=4)
@@ -107,7 +107,7 @@ dist = estimate_distribution(samples, n_vars=4)
 Compute statistics about a sample set.
 
 ```python
-from qcgm import sample_statistics
+from QuantumDGM import sample_statistics
 
 stats = sample_statistics(samples)
 
@@ -125,7 +125,7 @@ print(stats['entropy_estimate'])  # Empirical entropy
 Generate binary state labels for plotting.
 
 ```python
-from qcgm import generate_state_labels
+from QuantumDGM import generate_state_labels
 
 labels = generate_state_labels(3)
 # ['000', '001', '010', '011', '100', '101', '110', '111']
@@ -148,7 +148,7 @@ labels = generate_state_labels(3)
 Plot the structure of a graphical model.
 
 ```python
-from qcgm import visualize_graphical_model
+from QuantumDGM import visualize_graphical_model
 
 fig = visualize_graphical_model(
     model, 
@@ -165,7 +165,7 @@ fig = visualize_graphical_model(
 Create a simplified circuit visualization.
 
 ```python
-from qcgm import visualize_circuit_diagram, QCGMSampler
+from QuantumDGM import visualize_circuit_diagram, QCGMSampler
 
 sampler = QCGMSampler(model)
 sampler.build_circuit()
@@ -184,7 +184,7 @@ fig = visualize_circuit_diagram(
 Create distribution comparison bar charts.
 
 ```python
-from qcgm import plot_distribution_comparison, generate_state_labels, compute_fidelity
+from QuantumDGM import plot_distribution_comparison, generate_state_labels, compute_fidelity
 
 labels = generate_state_labels(model.n_vars)
 fidelity = compute_fidelity(exact_probs, quantum_probs)
@@ -205,7 +205,7 @@ fig = plot_distribution_comparison(
 Plot circuit complexity scaling.
 
 ```python
-from qcgm import analyze_circuit_complexity
+from QuantumDGM import analyze_circuit_complexity
 
 fig = analyze_circuit_complexity(
     max_vars=8,
@@ -220,7 +220,7 @@ fig = analyze_circuit_complexity(
 Display the actual Qiskit circuit.
 
 ```python
-from qcgm import show_qiskit_circuit
+from QuantumDGM import show_qiskit_circuit
 
 circuit = show_qiskit_circuit(model, max_gates=50)
 # Returns the QuantumCircuit object
@@ -235,7 +235,7 @@ circuit = show_qiskit_circuit(model, max_gates=50)
 Set global default backend for all samplers.
 
 ```python
-import qcgm
+import QuantumDGM
 from qiskit_aer import AerSimulator
 
 qcgm.set_default_backend(AerSimulator())
@@ -248,7 +248,7 @@ qcgm.set_default_backend(AerSimulator())
 Check installed packages.
 
 ```python
-import qcgm
+import QuantumDGM
 
 # Returns dict with version info
 status = qcgm.check_dependencies()
@@ -264,7 +264,7 @@ qcgm.print_dependency_status()
 Print package information.
 
 ```python
-import qcgm
+import QuantumDGM
 qcgm.info()
 ```
 

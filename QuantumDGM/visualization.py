@@ -55,8 +55,8 @@ def visualize_graphical_model(model,
         matplotlib.figure.Figure: The figure object
     
     Example:
-        >>> from qcgm import DiscreteGraphicalModel
-        >>> from qcgm.visualization import visualize_graphical_model
+        >>> from QuantumDGM import DiscreteGraphicalModel
+        >>> from QuantumDGM.visualization import visualize_graphical_model
         >>> model = DiscreteGraphicalModel(3, [{0, 1}, {1, 2}])
         >>> fig = visualize_graphical_model(model, "Chain Model")
         >>> plt.show()
@@ -132,8 +132,8 @@ def visualize_circuit_diagram(model,
         matplotlib.figure.Figure: The figure object
     
     Example:
-        >>> from qcgm import DiscreteGraphicalModel, QCGMSampler
-        >>> from qcgm.visualization import visualize_circuit_diagram
+        >>> from QuantumDGM import DiscreteGraphicalModel, QCGMSampler
+        >>> from QuantumDGM.visualization import visualize_circuit_diagram
         >>> model = DiscreteGraphicalModel(2, [{0, 1}])
         >>> sampler = QCGMSampler(model)
         >>> fig = visualize_circuit_diagram(model, sampler)
@@ -222,7 +222,7 @@ def compare_model_structures(figsize: Tuple[float, float] = (14, 10),
         matplotlib.figure.Figure: The figure object
     
     Example:
-        >>> from qcgm.visualization import compare_model_structures
+        >>> from QuantumDGM.visualization import compare_model_structures
         >>> fig = compare_model_structures()
         >>> plt.show()
     """
@@ -307,9 +307,9 @@ def plot_distribution_comparison(exact_probs: np.ndarray,
         matplotlib.figure.Figure: The figure object
     
     Example:
-        >>> from qcgm import DiscreteGraphicalModel, QCGMSampler
-        >>> from qcgm.utils import compute_fidelity, estimate_distribution, generate_state_labels
-        >>> from qcgm.visualization import plot_distribution_comparison
+        >>> from QuantumDGM import DiscreteGraphicalModel, QCGMSampler
+        >>> from QuantumDGM.utils import compute_fidelity, estimate_distribution, generate_state_labels
+        >>> from QuantumDGM.visualization import plot_distribution_comparison
         >>> 
         >>> model = DiscreteGraphicalModel(2, [{0, 1}])
         >>> model.set_random_parameters()
@@ -400,14 +400,14 @@ def analyze_circuit_complexity(max_vars: int = 6,
         matplotlib.figure.Figure: The figure object
     
     Example:
-        >>> from qcgm.visualization import analyze_circuit_complexity
+        >>> from QuantumDGM.visualization import analyze_circuit_complexity
         >>> fig = analyze_circuit_complexity(max_vars=5)
         >>> plt.show()
     """
     _check_dependencies()
     
-    from qcgm import DiscreteGraphicalModel
-    from qcgm.circuit import QuantumCircuitBuilder
+    from QuantumDGM import DiscreteGraphicalModel
+    from QuantumDGM.circuit import QuantumCircuitBuilder
     
     # Ensure figsize is a tuple
     if not isinstance(figsize, tuple):
@@ -471,13 +471,13 @@ def show_qiskit_circuit(model,
         QuantumCircuit: The circuit object
     
     Example:
-        >>> from qcgm import DiscreteGraphicalModel
-        >>> from qcgm.visualization import show_qiskit_circuit
+        >>> from QuantumDGM import DiscreteGraphicalModel
+        >>> from QuantumDGM.visualization import show_qiskit_circuit
         >>> model = DiscreteGraphicalModel(2, [{0, 1}])
         >>> model.set_random_parameters()
         >>> circuit = show_qiskit_circuit(model)
     """
-    from qcgm.circuit import QuantumCircuitBuilder
+    from QuantumDGM.circuit import QuantumCircuitBuilder
     
     print("Generating actual Qiskit circuit...")
     

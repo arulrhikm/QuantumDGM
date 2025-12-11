@@ -7,7 +7,7 @@ Test script for QCGM optimizations:
 import numpy as np
 import time
 
-from qcgm import DiscreteGraphicalModel, ApproximateCircuitBuilder, smart_circuit_builder
+from QuantumDGM import DiscreteGraphicalModel, ApproximateCircuitBuilder, smart_circuit_builder
 
 print('=' * 60)
 print('OPTIMIZATION TESTS')

@@ -1,0 +1,478 @@
+\documentclass[conference,10pt]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{bbm}
+\usepackage{microtype}
+\usepackage{balance}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Revised Plan v3: Addressing Reviewer Concerns for the Dual-Mode
+Quantum MRF Sampling Manuscript}
+
+\author{
+\IEEEauthorblockN{Arul Rhik Mazumder}
+\IEEEauthorblockA{\textit{School of Computer Science} \\
+\textit{Carnegie Mellon University}\\
+Pittsburgh, PA, USA \\
+arulm@cs.cmu.edu}
+}
+
+\maketitle
+
+\begin{abstract}
+This document is a revision plan, not a research paper. It enumerates the
+substantive concerns raised by the IEEE QCE peer review of the manuscript
+\emph{``A Dual-Mode Quantum Framework for Sampling Discrete Markov Random
+Fields''}, classifies each as \textbf{must-fix}, \textbf{should-fix}, or
+\textbf{defer-to-future-work}, and specifies the concrete changes to text,
+experiments, and citations that are required for resubmission. The plan is
+structured so that every reviewer concern maps to (a) one or more specific
+edits in the manuscript, (b) any new experiments needed to support the edit,
+and (c) an acceptance criterion that determines when the revision is
+complete. Twelve revision items are tracked in total. If items
+R1--R8 are completed, the manuscript should be competitive at IEEE QCE.
+Items R9--R12 are deferred to a follow-up paper.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Revision plan, peer review response, quantum sampling, MRF, IEEE QCE,
+reproducibility.
+\end{IEEEkeywords}
+
+\section{Scope and Triage}
+
+The reviewer raised eight major concerns and several minor ones. We classify
+each by severity and effort:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Must-fix before resubmission (R1--R5).} Issues that, if
+    left unaddressed, will cause rejection regardless of other merits.
+    These are: incorrect citation of the QCGM paper, the tautological
+    framing of the headline ESS result, the misleading framing of the
+    variational compression result, the incorrect framing of the null
+    clique-entanglement finding, and several internal inconsistencies and
+    presentation errors.
+    \item \textbf{Should-fix to be competitive (R6--R8).} Issues that
+    individually are survivable but collectively determine whether the
+    paper reads as a careful contribution or a preliminary report. These
+    are: adding at least one stronger classical baseline, normalising the
+    ESS comparison by wall-clock cost, and broadening the citation
+    landscape to cover Born machines, Wittek--Gogolin, and recent
+    QeMCMC follow-ups.
+    \item \textbf{Defer to future work (R9--R12).} Items that the reviewer
+    would like to see but that are out of scope for the current artifact.
+    These are: the full ancilla-based QCGM implementation, a hardware run,
+    multi-seed coverage at $n > 12$, and the marginal-matching variational
+    objective. Each is acknowledged in the limitations section with a
+    concrete handoff to a follow-up paper.
+\end{itemize}
+
+The remainder of this document walks each item.
+
+\section{Must-Fix Revisions}
+
+\subsection{R1 --- Correct the QCGM citation}
+
+\textbf{Concern.} Reference~[7] in the submitted manuscript reads
+``N.~Piatkowski, `Quantum circuits for discrete graphical models,' in
+Proc.~IEEE QCE, 2022.'' This is wrong on three counts: the paper has two
+authors (Piatkowski and Zoufal), the venue is \emph{Quantum Machine
+Intelligence} (Springer), and the publication year is 2024 (the 2022
+date refers to the arXiv preprint, arXiv:2206.00398). The author's own
+GitHub README cites the paper correctly, so this is a paper-internal
+inconsistency.
+
+\textbf{Action.} Replace the bibliography entry with:
+\begin{quote}\small
+N.~Piatkowski and C.~Zoufal, ``On quantum circuits for discrete graphical
+models,'' \emph{Quantum Machine Intelligence}, vol.~6, art.~57, 2024.
+[Online]. Available: \url{https://doi.org/10.1007/s42484-024-00175-y}.
+Originally available as arXiv:2206.00398, 2022.
+\end{quote}
+Update every in-text reference to QCGM accordingly. The text in
+\S\,Related Work that paraphrases the original method should be checked
+to ensure it accurately reflects the published version (which differs
+from early preprints in some details of the success-probability bound).
+
+\textbf{Acceptance criterion.} A literature-search reviewer can locate the
+paper from the citation as printed.
+
+\subsection{R2 --- Reframe the ESS result honestly}
+
+\textbf{Concern.} The headline ``$17.38\times$ ESS advantage'' compares
+i.i.d. quantum samples against single-site random-scan Gibbs. This is
+structurally tautological: amplitude-encoded samples have $\tau \approx 1$
+\emph{by construction}, and single-site Gibbs on loopy graphs is the
+weakest reasonable MCMC baseline. The reviewer correctly notes that the
+result, as currently framed, restates ``i.i.d. samples are uncorrelated.''
+
+\textbf{Action.} Three coordinated edits:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Abstract and introduction.} Replace ``quantum sample-quality
+    advantage'' with ``ESS gap relative to single-site Gibbs.'' Make explicit
+    that the comparison is informative about the cost of mixing in vanilla
+    MCMC, not about a quantum-vs-classical advantage in absolute terms.
+    \item \textbf{New baseline (see also R6).} Add a block-Gibbs comparator
+    that updates an entire clique at a time; report ESS ratios for both
+    baselines. The expectation is that block Gibbs will substantially
+    narrow the gap on the chain and two-clique families and reduce or
+    eliminate it on the barbell families. Whatever the outcome, report it.
+    \item \textbf{Limitations subsection.} Promote the existing
+    ``Comparison with advanced MCMC'' bullet to a full subsection
+    (\S\,Discussion) titled \emph{``What the ESS comparison does and does
+    not show''}, stating that the experiment quantifies the cost of using
+    the simplest MCMC variant and does not rule out classical samplers
+    with comparable autocorrelation.
+\end{enumerate}
+
+\textbf{Acceptance criterion.} The abstract no longer claims ``quantum
+sample-quality advantage'' as a primary contribution. The discussion
+makes it possible for a reader to estimate, within an order of
+magnitude, how much of the $17\times$ gap survives a stronger baseline.
+
+\subsection{R3 --- Recast the variational compression as a negative result}
+
+\textbf{Concern.} Table~III shows MPS dominating VQC at every measured
+size, with the absolute fidelity gap widening from $n=8$ ($-0.68$) to
+$n=10$ ($-0.75$) before slightly narrowing at $n=12$ ($-0.71$). Calling
+this ``compression of $113.8\times$'' is misleading: compression at
+$F=0.165$ is not compression in any operationally useful sense.
+
+\textbf{Action.}
+\begin{enumerate}[leftmargin=*]
+    \item Rename the contribution in the introduction from ``a variational
+    compression scheme'' to ``a characterization of the parameter--fidelity
+    trade-off for hardware-efficient ans\"atze on MRF distributions.''
+    \item Drop the unqualified compression-ratio numbers from the abstract.
+    Where they appear in the body, always pair them with the corresponding
+    fidelity value, e.g. ``$113.8\times$ parameter reduction at
+    $F_{\mathrm{VQC}} = 0.165$.''
+    \item In the discussion, state explicitly: ``At every size measured,
+    a depth-3 hardware-efficient ansatz with $nd$ parameters trained for
+    $\sim 75$ steps fails to match an MPS with bond dimension matched to
+    the same parameter budget. Whether this gap closes at larger $n$ or
+    deeper $d$ is an open empirical question; the present data do not
+    support a positive crossover.''
+    \item Add a paragraph in \S\,Future Directions identifying the
+    candidate fixes (deeper circuits with sensible initialization;
+    natural-gradient or quantum-natural-gradient optimization;
+    marginal-matching objective; clique-aware initial-state preparation),
+    and a clear statement that establishing a crossover is the central
+    open question.
+\end{enumerate}
+
+\textbf{Acceptance criterion.} A reader who reads only the abstract and
+the table captions cannot mistake the compression result for a positive
+finding.
+
+\subsection{R4 --- Demote the clique-entanglement contribution}
+
+\textbf{Concern.} The clique-vs-linear effect is $\Delta F = -2.28\times
+10^{-4}$ with $R^2 = 6.55\times 10^{-4}$. This is a null result, not a
+characterization. Listing it as a numbered novel contribution overstates
+what the data support.
+
+\textbf{Action.}
+\begin{enumerate}[leftmargin=*]
+    \item Remove ``problem-aware (clique-based) entanglement'' from the
+    numbered contributions list in the introduction.
+    \item Move the entanglement sweep to \S\,Results as a diagnostic, with
+    a one-sentence summary: ``In our 36-instance sweep, clique
+    entanglement provided no measurable advantage over linear entanglement
+    at the sizes tested ($n \le 14$).''
+    \item In Fig.~3 caption, drop the slope value ($2.58$) entirely. With
+    $R^2 = 0.003$ the slope is not interpretable; reporting it invites
+    misreading.
+    \item Add to limitations: ``Larger graphs and denser entanglement
+    structures than those tested here would be needed to detect any
+    benefit of clique-aligned entanglement.''
+\end{enumerate}
+
+\textbf{Acceptance criterion.} The introduction's contribution list
+contains only contributions that the experimental data substantiate.
+
+\subsection{R5 --- Fix internal inconsistencies and presentation errors}
+
+\textbf{Concern.} The reviewer flagged several issues that individually
+are minor but collectively erode credibility.
+
+\textbf{Action.} Apply the following edits:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Parameter-counting convention.} Tables~II and~III use
+    different conventions ($2nd$ vs $nd$). Pick one (recommendation: $nd$,
+    since the matched-budget crossover table is the more important
+    artifact), recompute Table~II rows under that convention, and add a
+    single explanatory sentence in \S\,Methods clarifying that $nd$
+    counts only $R_Y$ angles in the alternating layer scheme.
+    \item \textbf{Grid graphs.} Section~I-B mentions $n=9$ and $n=16$ grid
+    graphs ``representative of image-segmentation workloads,'' but they
+    never appear in the experiments. Either add at least one row of grid
+    results to Table~III, or remove the claim from \S\,I-B and replace it
+    with the actual experimental coverage (chain, barbell, barbell-path,
+    Erd\H{o}s--R\'enyi, two-clique).
+    \item \textbf{Reference~[2] (S\"oding 2005).} The cited paper is on
+    HMM-HMM protein homology detection, not MRFs. Replace with Kamisetty
+    et al., \emph{PNAS} 2013 (``Assessing the utility of coevolution-based
+    residue-residue contact predictions in a sequence- and
+    structure-rich era'') for the computational-biology motivation.
+    \item \textbf{``Exact samples.''} In the abstract and \S\,I-B,
+    reserve the phrase ``exact samples'' for the amplitude-encoding path
+    only. The variational path produces samples from $\hat P_{\theta}$,
+    not $P_{\theta}$.
+    \item \textbf{Table~II inversion.} Note in the table caption that
+    fidelity at $n=14$ ($0.438$) is below the $n=6$ enumeration-competitive
+    point ($0.519$), and explain in one sentence what this means: with
+    fixed depth $d=3$, the ansatz's expressive power does not keep pace
+    with the growing distribution dimension.
+    \item \textbf{Reproducibility timestamp.} The current note records
+    artifact regeneration on 2026-04-25, the day of submission. Add a
+    sentence stating that the seeds used for each experiment are listed
+    in the repository's \texttt{experiments/seeds.json}, and include the
+    seed list as supplementary material.
+\end{enumerate}
+
+\textbf{Acceptance criterion.} A second reading pass produces no
+conventions clashes, no orphaned claims (grid graphs), and no obviously
+unsupported statistical statements.
+
+\section{Should-Fix to Be Competitive}
+
+\subsection{R6 --- Add at least one stronger classical baseline}
+
+\textbf{Concern.} Without a stronger MCMC baseline, the headline ESS
+result is uninformative.
+
+\textbf{Action.} Implement and run \emph{block Gibbs} as the new primary
+classical baseline. Block Gibbs updates each maximal clique jointly via
+exact enumeration over the clique's $2^{|C|}$ assignments conditional on
+its boundary. Implementation effort: roughly one day, since the diagonal
+of $H_\theta$ is already computed for amplitude encoding and the same
+machinery enumerates clique-conditional probabilities. Run the same 60
+instances with the block-Gibbs comparator alongside single-site Gibbs.
+Report the new ESS ratios as an additional column in the ESS table.
+
+If time permits, add a Swendsen--Wang comparator for the two-clique and
+barbell families. Swendsen--Wang is the standard ``hard'' baseline for
+clustered Ising-like distributions and is the comparison that an
+informed reviewer will ask about.
+
+\textbf{Acceptance criterion.} The ESS table reports Quantum-vs-Single-Site
+\emph{and} Quantum-vs-Block ratios for all 60 instances. The text
+discusses how much of the original $17\times$ gap survives.
+
+\subsection{R7 --- Wall-clock-normalized comparison}
+
+\textbf{Concern.} The current ESS metric counts samples but ignores the
+$O(2^n)$ classical preprocessing required for amplitude encoding. The
+relevant operational quantity is \emph{ESS per second of total wall
+clock}, not ESS per sample.
+
+\textbf{Action.} Add a new table reporting, for each method
+(amplitude-encoded quantum, single-site Gibbs, block Gibbs, and where
+applicable Swendsen--Wang):
+\begin{itemize}[leftmargin=*]
+    \item Total wall-clock time including preprocessing.
+    \item Number of effective samples produced.
+    \item ESS per second.
+\end{itemize}
+The expectation is that block Gibbs will dominate amplitude encoding on
+ESS-per-second at the sizes where preprocessing is the binding cost
+($n \ge 10$). State this honestly; it does not undermine the paper, but
+it does refine the claim.
+
+\textbf{Acceptance criterion.} The discussion contains a clear statement
+of the regime in which amplitude encoding is competitive on a wall-clock
+basis (e.g., ``small $n$ with many independent samples per preprocessing
+batch'') and the regime in which it is not.
+
+\subsection{R8 --- Broaden the citation landscape}
+
+\textbf{Concern.} The current bibliography omits work the reviewer
+considers prior art:
+\begin{itemize}[leftmargin=*]
+    \item Liu \& Wang, \emph{Phys.~Rev.~A} 98, 062324 (2018), ``Differentiable
+    learning of quantum circuit Born machines.''
+    \item Benedetti et al., \emph{npj Quantum Inf.} 5, 45 (2019),
+    ``A generative modeling approach for benchmarking and training shallow
+    quantum circuits.''
+    \item Wittek \& Gogolin, \emph{Sci.~Rep.} 7, 45672 (2017),
+    ``Quantum enhanced inference in Markov logic networks.''
+    \item Ferguson \& Wallden, \emph{Phys.~Rev.~Research} 7, 013231 (2025),
+    ``Quantum-enhanced MCMC for systems larger than your quantum computer.''
+\end{itemize}
+
+\textbf{Action.} Add the four citations. Wittek--Gogolin in particular
+should be discussed in \S\,Related Work, because it is closer to MRF
+sampling than the Layden et al.\ Ising-MCMC work that currently anchors
+that paragraph. Liu--Wang and Benedetti et al.\ should be cited at the
+point where the variational-circuit-as-Born-machine framing is introduced
+in \S\,III-B.
+
+\textbf{Acceptance criterion.} The four references appear and are each
+discussed in at least one sentence of the body text.
+
+\section{Defer to Future Work}
+
+\subsection{R9 --- Full ancilla-based QCGM implementation}
+
+The reviewer notes, correctly, that the simplified amplitude-encoding
+path discards the very property (exponentially-better-than-classical
+preprocessing in the favorable parameter regime) that motivates the
+QCGM framework. The author estimated $2$--$4$ weeks of engineering. This
+is the central technical extension and is the natural follow-up paper.
+
+\textbf{Action for current submission.} Add a paragraph in \S\,Future
+Directions that scopes this work explicitly: ``A follow-up effort,
+estimated at four weeks, will implement the ancilla-based repeat-until-
+success construction of Piatkowski and Zoufal in our codebase, replacing
+the $O(2^n)$ classical preprocessing with the $O(\mathrm{poly}(|\mathcal{C}|))$
+quantum sampling primitive. That work will determine whether the
+amplitude-encoding fidelity guarantees demonstrated here transfer to the
+full quantum-advantage regime.''
+
+\subsection{R10 --- Hardware run}
+
+The reviewer notes that for a venue called \emph{Quantum Computing and
+Engineering}, all-simulator results are a hard sell.
+
+\textbf{Action for current submission.} Add to limitations and to
+future directions an explicit hardware-deployment plan: target IBM
+Heron (or comparable) for a pilot run at $n \in \{4, 6, 8\}$ on chain
+graphs, with readout error mitigation and zero-noise extrapolation.
+Acknowledge that no hardware data are reported in the present paper.
+If feasible before the final submission deadline, include even a single
+$n=4$ chain hardware result; the absolute fidelity does not need to be
+high to demonstrate that the pipeline runs end-to-end on a real device.
+
+\subsection{R11 --- Multi-seed coverage at $n > 12$}
+
+The MPS scaling table reports single-seed runs at $n \in \{12, 24, 32, 40\}$.
+The reviewer correctly notes that single-seed results at the edge of the
+study cannot be used to argue scaling trends.
+
+\textbf{Action for current submission.} Either run three additional seeds
+per $(n, \chi)$ cell in Table~VII (estimated cost: a few hours of
+BlueQubit time), or, if cost is prohibitive, add explicit error bars
+based on the within-instance variance of the single seed and clearly
+label the rows as preliminary. The former is preferred.
+
+\subsection{R12 --- Marginal-matching objective}
+
+The current variational training uses KL divergence end-to-end. A
+clique-marginal-matching objective could exploit the MRF factorization
+explicitly and is likely to improve fidelity by a meaningful amount.
+
+\textbf{Action for current submission.} List as a future direction with
+an estimated effort of one week and a concrete prediction (the
+$0.1$--$0.15$ fidelity gain mentioned in the original future-directions
+list). No experimental work in the current revision.
+
+\section{Cross-Cutting Edits}
+
+\subsection{Restructure the contributions list}
+
+The introduction's numbered contribution list, after R2 and R4, should
+read:
+\begin{enumerate}[leftmargin=*]
+    \item A reproducible benchmark of amplitude encoding for discrete
+    MRFs at $n = 8, 10, 12$, validating bit-ordering, normalization, and
+    the diagonal-only memory optimization to near-unit fidelity on
+    BlueQubit SV.
+    \item A graph-family-stratified characterization of the ESS gap
+    between amplitude-encoded i.i.d. sampling and two MCMC baselines
+    (single-site Gibbs and block Gibbs), reported on a wall-clock-normalized
+    basis across 60 instances.
+    \item An empirical study of hardware-efficient ans\"atze as
+    distribution compressors at $n \in \{8, 10, 12\}$, finding that depth-3
+    circuits with $nd$ parameters fail to match MPS at matched parameter
+    budgets, and identifying the candidate fixes whose evaluation is the
+    natural follow-up.
+    \item An open-source codebase with executable artifact-verification
+    scripts.
+\end{enumerate}
+
+This list is shorter than the submitted version, but each item is
+defensible from the data.
+
+\subsection{Title}
+
+The current title---``A Dual-Mode Quantum Framework for Sampling
+Discrete Markov Random Fields''---promises more than the paper now
+delivers. Two candidates:
+\begin{itemize}[leftmargin=*]
+    \item \emph{``A Reproducible Benchmark of Quantum Amplitude Encoding for
+    Discrete Markov Random Field Sampling''} --- conservative, accurate.
+    \item \emph{``Quantum Amplitude Encoding for Discrete MRFs: An ESS
+    Characterization Against Gibbs Baselines''} --- centers the headline
+    finding.
+\end{itemize}
+Either is preferable to the current title once the variational result
+is recast as in R3.
+
+\subsection{Status table}
+
+The status table (Table~IX) is one of the strongest features of the
+manuscript and should be preserved. Update it to reflect the new state
+after R2--R4 and R6--R7:
+\begin{itemize}[leftmargin=*]
+    \item ESS characterization: now ``Complete with two baselines.''
+    \item VQC compression: now ``Negative result at $n \le 12$; crossover
+    open.''
+    \item Clique entanglement: now ``Null at tested scales; demoted from
+    contribution.''
+    \item Hardware run: ``Deferred to follow-up.''
+\end{itemize}
+
+\section{Estimated Effort and Timeline}
+
+The must-fix items (R1--R5) are pure-text edits and require roughly
+two days of focused writing, with R5 requiring a careful pass to
+unify conventions across tables. The should-fix items (R6--R8)
+require new experiments:
+\begin{itemize}[leftmargin=*]
+    \item R6 (block Gibbs implementation and 60-instance run): one day.
+    \item R7 (wall-clock-normalized table): half a day, since the timing
+    instrumentation is already in place.
+    \item R8 (citation additions): half a day.
+\end{itemize}
+Total revision effort: approximately one work week. R9--R12 are
+out of scope and deferred.
+
+\section{Acceptance-Probability Estimate (Self-Assessed)}
+
+The reviewer estimated the current paper at 10--15\% acceptance, and
+estimated that completing the must-fix and should-fix items would put
+the revised paper at 45--55\%. We accept that estimate. The dominant
+remaining risk after R1--R8 is the absence of hardware results (R10),
+which a strict QCE reviewer may still consider disqualifying. If the
+hardware pilot in R10 can be executed before the final deadline, even
+at $n = 4$, the paper moves into the upper end of that range.
+
+\section{Summary}
+
+This revision plan converts the eight major reviewer concerns into
+twelve concrete revision items, of which five are pure-text edits
+(R1--R5), three require additional experiments at modest cost (R6--R8),
+and four are deferred to a follow-up effort (R9--R12). The plan
+preserves the strengths the reviewer identified---honest reporting,
+reproducible code, the status table---and removes the framings that
+the reviewer correctly flagged as overclaims. If executed, the revised
+manuscript will be a defensible benchmark paper rather than an
+overclaimed result paper, which is the appropriate genre for the
+current state of the work.
+
+\end{document}

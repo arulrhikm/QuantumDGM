@@ -1,0 +1,618 @@
+\documentclass[conference,10pt]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{bbm}
+\usepackage{microtype}
+\usepackage{balance}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+% Self-contained artifact snapshot values (inlined for Overleaf portability).
+
+\begin{document}
+
+\title{Quantum Amplitude Encoding for Discrete MRFs: An ESS Characterization Against Single-Site Gibbs Baselines}
+
+\author{
+\IEEEauthorblockN{Arul Rhik Mazumder}
+\IEEEauthorblockA{\textit{School of Computer Science} \\
+\textit{Carnegie Mellon University}\\
+Pittsburgh, PA, USA \\
+arulm@cs.cmu.edu}
+}
+
+\maketitle
+
+\begin{abstract}
+Sampling from Markov random fields (MRFs) is a central but notoriously difficult problem in probabilistic inference, with exact methods scaling as $O(2^n)$ and classical Monte Carlo methods suffering from slow mixing, burn-in overhead, and sample correlation. We introduce a dual-mode quantum sampling framework for discrete graphical models combining amplitude encoding for small models and variational circuit compression for larger ones. Our primary completed finding is an ESS-gap characterization against two Gibbs baselines: across 60 instances spanning five graph families (barbell, barbell-path, chain, Erd\H{o}s--R\'enyi, two-clique) with 1\,000-step burn-in and 3\,000 retained samples, Quantum/Single-Site-Gibbs ESS ratios have mean $16.59$ (median $15.95$, range $[9.45,32.89]$), while Quantum/Block-Gibbs ESS ratios have mean $7.00$ (median $6.50$, range $[3.31,18.23]$). This narrows but does not eliminate the ESS gap, and quantifies the autocorrelation cost of baseline MCMC choices in this artifact. Amplitude encoding achieves near-unit fidelity ($F \approx 1.000$) at $n = 8, 10, 12$ on BlueQubit SV backends. In matched-budget crossover rows at $n = 8, 10, 12$, VQC achieves parameter reductions of $10.7\times$, $34.1\times$, and $113.8\times$ at fidelities $(F_{\mathrm{VQC}}, F_{\mathrm{MPS}}) = (0.306, 0.990)$, $(0.210, 0.958)$, and $(0.165, 0.878)$; no positive crossover $n^*$ is observed in committed runs. These results provide a reproducible benchmark baseline with concrete findings and a clearly delimited experimental agenda.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Quantum machine learning, variational quantum circuits, Markov random fields, graphical models, amplitude encoding, quantum sampling, hardware-efficient ansatz, Monte Carlo methods.
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+\subsection{Problem Selection and Motivation}
+
+Markov random fields (MRFs) encode conditional independence structures through undirected graphs and are fundamental to computer vision~\cite{li2009markov}, computational biology~\cite{kamisetty2013coevolution}, statistical physics, and generative modeling~\cite{salakhutdinov2009deep}. The central computational challenge is drawing samples from the joint distribution
+\begin{equation}
+P_\theta(\mathbf{x}) = \frac{1}{Z(\theta)}\exp\!\left(\sum_{C\in\mathcal{C}}\sum_{\boldsymbol{y}\in\mathcal{X}_C}\theta_{C,\boldsymbol{y}}\,\phi_{C,\boldsymbol{y}}(\mathbf{x})\right),
+\label{eq:mrf}
+\end{equation}
+where $\mathcal{C}$ denotes the set of maximal cliques of the graph, $\phi_{C,\boldsymbol{y}}$ are indicator sufficient statistics, and the partition function $Z(\theta)$ requires summing over $2^n$ configurations for binary variables. This exponential cost makes exact inference intractable for all but the smallest models and motivates a wide array of approximate techniques.
+
+We selected MRF sampling as our target problem precisely because classical methods face well-documented, fundamental limitations. Markov chain Monte Carlo (MCMC) methods such as Gibbs sampling~\cite{geman1984stochastic} and Metropolis--Hastings suffer from slow mixing on loopy graphs, often requiring extensive burn-in periods and producing highly correlated samples that reduce the effective sample size. Variational inference~\cite{wainwright2008graphical} trades accuracy for speed by restricting attention to a tractable family of distributions, but is sensitive to local optima and systematically underestimates posterior variance. Loopy belief propagation~\cite{pearl1988probabilistic} provides a message-passing alternative but is not guaranteed to converge on cyclic graphs. These limitations together motivate the exploration of quantum approaches that, in the amplitude-encoding path, can produce exact samples from the target distribution without any notion of mixing time.
+
+\subsection{Data Structure and Architecture}
+
+Our datasets consist of \emph{synthetic} MRFs with controlled graph structures used in the reported experiments: chain, barbell, barbell-path, Erd\H{o}s--R\'enyi, and two-clique families over small-to-medium $n$ regimes. Clique parameters are drawn as $\theta_{C,\boldsymbol{y}} \sim \mathcal{U}(-5,0)$, producing moderately peaked distributions typical of real applications without pushing into the extreme low-temperature regime where sampling becomes a combinatorial optimization problem. The choice of synthetic data is deliberate: it enables us to compute ground-truth probabilities for all $2^n$ configurations via direct enumeration, which in turn allows us to compute exact fidelities, KL divergences, and total variation distances---rigorous validation that would be impossible with real datasets of comparable scale.
+
+We implement a dual architecture that adapts to problem size:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Amplitude encoding} for $n \le 10$, using Qiskit's state-initialization primitive to directly prepare quantum states whose squared amplitudes match the exact target distribution; and
+    \item \textbf{Variational quantum circuits (VQC)} for $n > 10$, using hardware-efficient ans\"atze with problem-aware entanglement patterns to compress the exponentially large distribution into a polynomial number of trainable parameters.
+\end{enumerate}
+In the current artifact codebase, experiment runners choose the active path by regime (amplitude-style state preparation for small-$n$ analyses and variational circuits for larger-$n$ studies), exposing a consistent results interface through shared backend and metric utilities.
+
+\subsection{Evaluation Methodology}
+
+We assess sampling quality using three complementary information-theoretic metrics:
+\begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=2pt, parsep=0pt]
+    \item \textbf{Fidelity} between the empirical distribution $\hat{P}$ and the target $P_\theta$:
+    \[
+    F(\hat{P}, P_\theta) = \Bigg(\sum_x \sqrt{\hat{P}(x)\,P_\theta(x)}\Bigg)^2 \in [0,1],
+    \]
+    a quantum-native overlap measure that equals $1$ for identical distributions and is zero for distributions with disjoint support.
+    \item \textbf{Kullback--Leibler (KL) divergence}:
+    \[
+    D_{\mathrm{KL}}(\hat{P}\,\|\,P_\theta) = \sum_x \hat{P}(x)\log\frac{\hat{P}(x)}{P_\theta(x)},
+    \]
+    quantifying the expected information loss when $\hat{P}$ is used as an approximation to $P_\theta$, and used as our training objective.
+    \item \textbf{Total variation (TV) distance}:
+    \[
+    \mathrm{TV}(\hat{P}, P_\theta) = \tfrac{1}{2}\sum_x \big|\hat{P}(x) - P_\theta(x)\big|,
+    \]
+    providing an upper bound on the worst-case probability difference for any event.
+\end{itemize}
+We report all three metrics wherever relevant, since they capture qualitatively different notions of distributional closeness: fidelity is sensitive to support alignment, KL to tail mismatch, and TV to pointwise error.
+
+\subsection{Baseline and Novel Contributions}
+
+Our \textbf{baseline} is an amplitude-encoding implementation based on the Quantum Circuits for Graphical Models (QCGM) framework~\cite{piatkowski2024qcgms}, in which a diagonal Hamiltonian $H_\theta$ encodes the log-potentials of the MRF and the Gibbs state $\exp(-H_\theta)/Z$ is approximated by a prepared quantum state. In practice, this baseline yields high fidelity for small instances but still requires $O(2^n)$ classical preprocessing to compute the full diagonal.
+
+Our \textbf{novel contributions} are as follows:
+\begin{enumerate}[leftmargin=*]
+    \item A reproducible benchmark of amplitude encoding for discrete MRFs at $n = 8, 10, 12$, validating bit-ordering, normalization, and diagonal-only memory optimization to near-unit fidelity on BlueQubit SV.
+    \item A graph-family-stratified characterization of the ESS gap between amplitude-encoded i.i.d. sampling and two Gibbs baselines (single-site and block) across 60 instances, including wall-clock-normalized ESS diagnostics.
+    \item An empirical study of hardware-efficient ans\"atze as distribution compressors at $n \in \{8,10,12\}$, finding that depth-3 circuits with $nd$ parameters remain below matched-budget MPS fidelity at all measured points.
+    \item An open-source implementation with executable artifact-verification scripts for reproducible benchmarking and manuscript-table regeneration.
+\end{enumerate}
+
+At a glance, amplitude encoding attains high-fidelity sampling for small models in our demos, while variational compression trades fidelity for scalability with polynomial parameter counts. When quantum and classical methods both access the full distribution, their computational costs are comparable; however, the quantum workflow retains practical statistical advantages (independence and zero burn-in) relative to Gibbs-style chains.
+
+\section{Related Work}
+
+\textbf{Quantum Boltzmann Machines.} Amin et al.~\cite{amin2018qbm} proposed a
+machine-learning framework in which model parameters are trained using a quantum
+Boltzmann distribution of a transverse-field Ising Hamiltonian, with D-Wave
+hardware serving as a potential sampler. Their contribution is the training
+formulation and the bound-based approximation that makes optimization
+tractable despite the non-commutative nature of quantum mechanics. However, their
+method is restricted to specific hardware topologies and the distribution sampled
+is a thermal approximation rather than the exact target. Our gate-based approach
+targets universal quantum computers with arbitrary connectivity and produces exact
+samples from discrete MRF distributions without thermal approximations.
+
+\textbf{Quantum State Preparation for Bayesian Networks.} Low et al.~\cite{low2014bayes} developed polynomial-depth circuits for tree-structured Bayesian networks, exploiting conditional independence to achieve a quadratic speedup over classical sampling via quantum rejection sampling and amplitude amplification. Their technique, however, does not extend to undirected graphs with cycles. We target undirected MRFs with arbitrary cycles by leveraging the QCGM clique-factorization and diagonal-Hamiltonian representation, which naturally accommodates loopy graphs.
+
+\textbf{Variational Quantum Algorithms.} Verdon et al.~\cite{verdon2019vqe} proposed
+variational circuits for preparing thermal states of quantum Hamiltonians---the
+variational quantum thermalizer---as a near-term approach to quantum Gibbs
+sampling and generative modeling. Their focus is on state preparation for quantum
+Hamiltonians rather than on fitting known classical distributions, which requires
+different training objectives and validation strategies. In contrast, our variational
+method targets \emph{known} classical MRF distributions, enabling direct validation
+through fidelity metrics and providing clean insight into the expressiveness of
+parameterized quantum ans\"atze as distribution compressors.
+
+\textbf{Quantum-Enhanced MCMC.} Layden et al.~\cite{layden2023qemcmc} introduced and
+experimentally demonstrated a quantum algorithm that performs Markov chain Monte
+Carlo to sample from the Boltzmann distribution of classical Ising models, with
+provable convergence to the correct distribution and a polynomial speedup over
+classical alternatives. While promising, the algorithm still requires sequential
+Markov chain steps and a notion of mixing time. Our approach eliminates mixing
+entirely: each circuit execution yields a sample drawn independently from the
+target distribution, at the cost of $O(2^n)$ classical preprocessing in the
+amplitude-encoding mode.
+
+\textbf{Tensor Networks and Born Machines.} Related work on Born machines~\cite{huggins2019towards,liu2018differentiable,benedetti2019generative} interprets variational circuits as tensor-network representations of probability distributions. Our variational compression can be understood in this framework: hardware-efficient ans\"atze implement a matrix-product-state-like decomposition whose bond dimension grows with circuit depth.
+
+\textbf{Quantum Inference for Graphical Models.} Wittek and Gogolin~\cite{wittek2017quantum} studied quantum-enhanced inference in Markov logic networks, a closely related probabilistic-graphical-model setting. Their framing complements our focus on executable, artifact-backed sampling benchmarks for discrete MRFs.
+
+\textbf{Post-Layden QeMCMC.} Beyond the original QeMCMC demonstration~\cite{layden2023qemcmc}, follow-up work studies variants that target larger effective systems~\cite{ferguson2025qemcmc}.
+
+\section{Methods}
+
+\subsection{Baseline: Amplitude Encoding}
+
+For $n \le 10$, we construct the diagonal Hamiltonian
+\begin{equation}
+H_\theta = -\sum_{C\in\mathcal{C}}\sum_{\boldsymbol{y}} \theta_{C,\boldsymbol{y}}\,\Phi_{C,\boldsymbol{y}},
+\end{equation}
+where $\Phi_{C,\boldsymbol{y}}$ is a diagonal operator whose $(j,j)$ entry is the indicator that configuration $\mathbf{x}^j$ is consistent with assignment $\boldsymbol{y}$ on clique $C$. The target distribution is then
+\[
+P_\theta(\mathbf{x}^j) = \frac{(\exp(-H_\theta))_{j,j}}{\operatorname{Tr}(\exp(-H_\theta))}.
+\]
+
+\textbf{Implementation.} Our amplitude-encoding pipeline proceeds as follows:
+\begin{enumerate}[leftmargin=*]
+    \item Compute the diagonal of $H_\theta$ in $O(2^n)$ time by summing clique contributions.
+    \item Apply the matrix exponential element-wise to obtain unnormalized probabilities $\tilde{P}(x) = e^{-H_\theta(x,x)}$.
+    \item Normalize to produce target probabilities $P_\theta(x) = \tilde{P}(x)/Z$.
+    \item Compute amplitudes $\alpha_x = \sqrt{P_\theta(x)}$.
+    \item Reorder amplitudes from the model's big-endian convention to Qiskit's little-endian bit ordering.
+    \item Prepare $|\psi\rangle = \sum_x \alpha_x |x\rangle$ using Qiskit's \texttt{StatePreparation} primitive.
+    \item Measure in the computational basis to obtain samples from $\hat{P}$.
+\end{enumerate}
+
+\textbf{Key optimization.} Computing only the diagonal of $H_\theta$ requires $O(2^n)$ memory rather than the $O(4^n)$ required to store the full Hamiltonian as a dense matrix. This diagonal-only path is used throughout the executable artifact pipeline for feasible exact-style targets at small $n$.
+
+\textbf{Design rationale.} We chose the simplified amplitude-encoding variant over the full QCGM circuit construction because it is easier to audit/debug and already supports strong small-$n$ fidelity in the current artifacts. The trade-off is that we retain the $O(2^n)$ preprocessing cost rather than pursuing a full Hamiltonian-simulation speedup path.
+
+\subsection{Novel Approach: Variational Compression}
+
+For $n > 10$, storing or manipulating the full diagonal of $H_\theta$ becomes impractical, and we instead train a hardware-efficient ansatz~\cite{kandala2017hardware}:
+\begin{equation}
+U(\boldsymbol{\theta}) = \prod_{l=1}^{d}\!\left[\!\left(\bigotimes_{i=1}^{n} R_Y(\theta_{i,l})\right)\!\left(\prod_{(i,j)\in E}\!\mathrm{CX}_{i,j}\right)\!\right]\!,
+\end{equation}
+consisting of $d$ layers of single-qubit $R_Y$ rotations interleaved with entangling CNOT gates on a fixed edge set $E$. We count trainable parameters using the $nd$ convention (one $R_Y$ angle per qubit per layer), which is far fewer than the $2^n$ amplitudes of the target distribution. Starting from $|0\rangle^{\otimes n}$, the circuit prepares
+\[
+|\psi(\boldsymbol{\theta})\rangle = U(\boldsymbol{\theta})|0\rangle^{\otimes n},
+\]
+inducing the distribution $\hat{P}_{\boldsymbol{\theta}}(x) = |\langle x|\psi(\boldsymbol{\theta})\rangle|^2$.
+
+\textbf{Entanglement strategies.} We compare three choices for the edge set $E$:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Linear:} CNOTs between adjacent qubits $(i,i+1)$. This is depth-efficient ($n{-}1$ gates per layer) but has limited expressiveness for long-range correlations.
+    \item \textbf{Clique:} CNOTs that follow the clique structure of the MRF graph, coupling qubits that share a factor in the target distribution. This is problem-aware and explicitly encodes the graph topology into the circuit.
+    \item \textbf{Full:} All-to-all connectivity, maximally expressive but incurring approximately $3\times$ longer training time due to the quadratic number of entangling gates per layer.
+\end{enumerate}
+
+\textbf{Training.} We minimize the KL divergence objective
+\[
+\min_{\boldsymbol{\theta}} \; D_{\mathrm{KL}}(\hat{P}_{\boldsymbol{\theta}} \,\|\, P_\theta)
+\]
+using parameter-shift gradient estimates with first-order updates in the released scripts~\cite{schuld2019evaluating}. Training typically uses tens of iterations (e.g., 30--80), with depth and iteration budgets controlled directly by experiment-runner arguments (e.g., \texttt{experiments/run\_entanglement\_sweep.py} and \texttt{experiments/run\_large\_n\_sweep.py}). We use fixed random seeds for parameter initialization to ensure reproducibility.
+
+\textbf{Why this works.} MRF distributions, despite living in a $2^n$-dimensional probability simplex, are constrained by the clique factorization $P(\mathbf{x}) = \prod_C \psi_C(\mathbf{x}_C)$ to a lower-dimensional manifold determined by the graph topology. Parameterized quantum circuits can be viewed as implementing a tensor-network decomposition~\cite{huggins2019towards}: single-qubit rotations parameterize local marginals, while entangling gates capture correlations between neighboring variables. When the entanglement pattern matches the graphical-model structure (the clique strategy), this factorization is particularly efficient---an analogue of how convolutional neural networks exploit spatial locality in images.
+
+\subsection{Unsuccessful Methods}
+
+We report several approaches that did not work, along with the lessons learned:
+
+\textbf{Deep circuits ($d > 5$).} Adding more layers produced minimal fidelity gains in exploratory studies while increasing training time, a behavior consistent with harder optimization and potential barren-plateau effects~\cite{mcclean2018barren}. \emph{Lesson:} for larger depths, optimization strategy and initialization become increasingly important.
+
+\textbf{Random entanglement patterns.} Circuits with randomly chosen two-qubit edges showed less stable behavior across seeds than structured patterns. \emph{Lesson:} problem-aware entanglement is preferable for reproducibility.
+
+\textbf{Insufficient training iterations.} Early experiments with small iteration budgets produced premature convergence and materially lower fidelity than longer runs. \emph{Lesson:} allocate a sufficient optimization budget for each problem size and graph family.
+
+\textbf{$\ell_2$ loss only.} Training with squared-error loss produced mode collapse: the circuit matched high-probability configurations well but placed very little mass on tail configurations. \emph{Lesson:} KL divergence naturally penalizes tail errors through its logarithmic term and should be the default objective for distribution-matching tasks.
+
+\subsection{Experimental Setup}
+\label{sec:setup}
+
+\textbf{Implementation.} We use Qiskit with local Aer simulation and BlueQubit cloud backends through a unified adapter layer in \texttt{src/backends.py}. All experiments use fixed random seeds for reproducibility. Classical baselines include exact inverse-CDF sampling (when full enumeration is feasible), Gibbs-style chains with burn-in, and BlueQubit MPS baselines where configured.
+
+\textbf{ESS baseline protocol.} For Experiment~D, we evaluate two Gibbs comparators over the same 60 instances: (i) random-scan single-site Gibbs and (ii) block Gibbs that updates a full maximal clique each step. Both use burn-in of 1000 steps and 3000 retained samples per instance; ESS is computed from scalar sample series using integrated autocorrelation-time estimation~\cite{geyer1992practical}. We report Quantum/Single-Site-Gibbs and Quantum/Block-Gibbs ESS ratios, plus wall-clock-normalized ESS diagnostics.
+
+\textbf{Validation.} The active repository validates behavior through executable experiment outputs and artifact checks (notably \texttt{experiments/verify\_paper\_artifacts.py}), including backend provenance fields, entanglement strategy comparisons, and generated table/figure consistency.
+
+\textbf{Hardware.} Experiments use a hybrid backend setup: local Aer simulation and BlueQubit cloud backends for statevector/MPS evaluation where configured. These are simulator-style backends rather than physical quantum hardware runs; wall-clock timings are backend- and queue-dependent and are reported directly from generated artifacts.
+
+\section{Results}
+
+Our results section is organized to lead with the primary completed finding (ESS characterization, \S\ref{sec:ess}), followed by amplitude encoding correctness (\S\ref{sec:amplitude}), the variational crossover experiment (\S\ref{sec:vqc}), and MPS/amplitude scaling in progress (\S\ref{sec:scaling}). The ESS finding is the most complete and directly comparable result in the current artifacts; the compression and scaling results are committed but require broader runs for final claims.
+
+\subsection{Quantum Statistical Advantages (Primary Finding)}
+\label{sec:ess}
+
+Quantum amplitude encoding produces samples that are structurally independent across circuit executions, yielding $\tau \approx 1$ regardless of graph topology. We quantify the resulting ESS gap against two MCMC baselines (single-site Gibbs and block Gibbs) over 60 matched instances under the protocol in \S\ref{sec:setup}.
+
+Results are shown in Fig.~\ref{fig:expD_ess} and summarized below. For Quantum/Single-Site-Gibbs, ESS ratios are above one across all 60 instances, with mean $16.59$, median $15.95$, and range $[9.45,32.89]$. For Quantum/Block-Gibbs, the gap narrows but remains above one in the current artifact, with mean $7.00$, median $6.50$, and range $[3.31,18.23]$. Single-site family-level means are:
+\begin{itemize}[leftmargin=*, topsep=2pt, itemsep=2pt]
+    \item \textbf{Barbell ($15.66$):} Bottleneck structure remains challenging for single-site updates.
+    \item \textbf{Barbell-path ($17.86$):} Strong ESS gap persists on this hybrid bottleneck topology.
+    \item \textbf{Chain ($17.82$):} Largest family-level gap in the current single-site baseline artifact.
+    \item \textbf{Erd\H{o}s--R\'enyi ($16.21$):} Gaps remain substantial under mixed connectivity.
+    \item \textbf{Two-clique ($15.39$):} Consistently above-one ESS ratios, but lower than chain/barbell-path means.
+\end{itemize}
+
+The ESS ratio vs.\ mixing-difficulty relationship (Fig.~\ref{fig:expD_ess}) shows only a weak global linear trend ($R^2\approx0.016$ for single-site), indicating that family/topology effects are more informative than a single global line fit for explaining ESS-ratio variation.
+
+\begin{table}[t]
+\centering
+\caption{ESS-gap summary against two Gibbs baselines (60 instances).}
+\label{tab:ess_baselines}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Comparator} & \textbf{Mean} & \textbf{Median} & \textbf{Min} & \textbf{Max} \\
+\midrule
+Quantum / Single-site Gibbs & 16.59 & 15.95 & 9.45 & 32.89 \\
+Quantum / Block Gibbs & 7.00 & 6.50 & 3.31 & 18.23 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Wall-clock-normalized ESS diagnostics (artifact means).}
+\label{tab:ess_per_sec}
+\begin{tabular}{lc}
+\toprule
+\textbf{Method} & \textbf{Mean ESS/s} \\
+\midrule
+Quantum i.i.d. sampler & 409.11 \\
+Single-site Gibbs & 0.82 \\
+Block Gibbs & 0.03 \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+{\footnotesize Reported ESS/s values follow the current artifact implementation and should be interpreted alongside preprocessing-cost caveats in \S\ref{sec:limitations_mcmc}.}
+\end{table}
+
+\subsection{Amplitude Encoding}
+\label{sec:amplitude}
+
+Table~\ref{tab:amplitude} reports generated fidelity values for amplitude encoding on chain graphs of varying size. In the current artifact snapshot, fidelity is near-unity for the reported small-$n$ settings; regenerate with the provided scripts to update these values for your backend/session.
+
+\begin{table}[t]
+\centering
+\caption{Amplitude encoding on chain graphs. ``Depth'' refers to logical circuit depth before Qiskit's decomposition into hardware gates.}
+\label{tab:amplitude}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{$n$} & \textbf{States} & \textbf{Fidelity} & \textbf{Depth} & \textbf{Qubits} & \textbf{Time (s)} \\
+\midrule
+8 & 256 & 1.000 & $O(1)$ & 8 & 2.92 \\
+10 & 1024 & 1.000 & $O(1)$ & 10 & 3.91 \\
+12 & 4096 & 1.000 & $O(1)$ & 12 & 12.71 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Variational Compression}
+\label{sec:vqc}
+
+Table~\ref{tab:compression} summarizes the currently generated Experiment~B artifact rows (\texttt{experiments/results/large\_n\_comparison.json}). In the present snapshot ($n=8,10,12$), we observe the expected compression/accuracy trade-off under matched-budget comparison, with MPS reaching higher fidelity than the current shallow VQC runs at these sizes.
+
+\begin{table}[t]
+\centering
+\caption{Variational scaling from \texttt{reviewer\_metrics.json}. Parameter counts follow the $nd$ convention (counting only $R_Y$ angles in depth-$d$ alternating layers). $n=6$ is below the practical variational threshold and included for completeness only$^\dagger$; primary results begin at $n=8$. The $n=14$ row ($F=0.438$) below the $n=6$ row ($F=0.519$) indicates that with fixed depth $d=3$, expressivity does not keep pace with distribution dimension.}
+\label{tab:variational}
+\begin{tabular}{lccccl}
+\toprule
+\textbf{$n$} & \textbf{Depth} & \textbf{Params} & \textbf{Reduction} & \textbf{Fidelity} & \textbf{Train steps} \\
+\midrule
+$6^\dagger$  & 3 & 18 & $3.6\times$   & 0.519 & 38 \\
+8            & 3 & 24 & $10.7\times$  & 0.617 & 50 \\
+10           & 3 & 30 & $34.1\times$  & 0.467 & 62 \\
+12           & 3 & 36 & $113.8\times$ & 0.494 & 74 \\
+14           & 3 & 42 & $390.1\times$ & 0.438 & 86 \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+{\footnotesize $^\dagger$At $n=6$, $3.6\times$ compression ($18$ vs.\ $64$ amplitudes) remains in an enumeration-competitive regime; the variational approach is not recommended here.}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Experiment B compression table generated from \texttt{large\_n\_comparison.json}. Parameter counts use the same $nd$ convention as Table~\ref{tab:variational}.}
+\label{tab:compression}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{$n$} & \textbf{VQC Params} & \textbf{MPS Params} & \textbf{$F_{\mathrm{VQC}}$} & \textbf{$F_{\mathrm{MPS}}$} & \textbf{Comp.} \\
+\midrule
+8 & 24 & 56 & 0.306 & 0.990 & 10.7 \\
+10 & 30 & 72 & 0.210 & 0.958 & 34.1 \\
+12 & 36 & 88 & 0.165 & 0.878 & 113.8 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Topology and Entanglement Diagnostics}
+
+The density-vs-topology effect from Experiment~A2 is clearer as a compact diagnostic table than as a noisy scatter fit in this artifact snapshot. Table~\ref{tab:delta_density} reports the generated summary from executable results.
+
+\begin{table}[t]
+\centering
+\caption{Experiment A2 summary from generated artifacts (\texttt{entanglement\_sweep.json}).}
+\label{tab:delta_density}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Pairs} & \textbf{Mean $\Delta F$} & \textbf{Slope} & \textbf{$R^2$} \\
+\midrule
+36 & -0.0002 & -0.0003 & 0.0007 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Entanglement and Runtime Findings}
+
+We report committed numbers directly from the executed artifacts. Across 36 matched graph instances (family, $n$, seed), the clique-versus-linear effect is small in this snapshot: mean $\Delta F = F_{\text{clique}}-F_{\text{linear}} = -2.28\times 10^{-4}$, slope versus density $=-2.62\times 10^{-4}$, and $R^2=6.55\times10^{-4}$ (Table~\ref{tab:delta_density}). For context, full entanglement is consistently above linear in this same dataset with mean $F_{\text{full}}-F_{\text{linear}}=2.58\times10^{-3}$ (range $[1.41\times10^{-4},1.39\times10^{-2}]$), indicating a measurable but modest expressivity gain at higher entangling cost.
+
+In the current crossover rows, VQC remains below MPS at all measured points: at $n=8$, $(F_{\mathrm{VQC}},F_{\mathrm{MPS}})=(0.306,0.990)$; at $n=10$, $(0.210,0.958)$; and at $n=12$, $(0.165,0.878)$ (Table~\ref{tab:compression}, Fig.~\ref{fig:expB_headline}). The fidelity gap remains negative but narrows slightly from $n=10$ to $n=12$ ($-0.748\rightarrow-0.713$), so no positive crossover $n^*$ is observed in the committed B1 rows.
+
+\subsection{Fair Benchmarking}
+
+Table~\ref{tab:fair} reports a strict full-access baseline check. When both methods have full access to $P_\theta$, classical inverse-CDF sampling is exact ($F=1.000$), while the listed VQC rows show approximate fits under their respective entanglement layouts.
+
+\begin{table}[t]
+\centering
+\caption{Fair comparison: all methods have full access to $P_\theta$.}
+\label{tab:fair}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Method} & \textbf{Fidelity} & \textbf{Notes} \\
+\midrule
+Classical inverse-CDF (exact) & 1.000 & Full-access reference \\
+Quantum VQC (linear) & 0.260 & n=10 \\
+Quantum VQC (clique) & 0.259 & n=10 \\
+Quantum VQC (full) & 0.263 & n=10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Computational Cost}
+
+Table~\ref{tab:timing} shows wall-clock timings generated from the current Experiment~B artifacts. Absolute times are backend- and queue-dependent; we treat them as reproducibility metadata rather than hardware-independent performance claims.
+
+\begin{table}[t]
+\centering
+\caption{Wall-clock times for 1000 samples on an $n=8$ chain graph.}
+\label{tab:timing}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Method} & \textbf{Time (s)} & \textbf{Notes} \\
+\midrule
+VQC train+eval & 317.56 & Experiment B \\
+MPS sampling & 105.72 & Experiment B \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/expA_fidelity_vs_n.png}
+\caption{Experiment A1: fidelity vs.\ $n$ by entanglement strategy (linear, clique, full) across graph families. Near-unity fidelity at $n = 8, 10, 12$ in the amplitude-encoding regime; fidelity decay with $n$ in the variational regime. Clique-minus-linear mean $\Delta F = -2.28 \times 10^{-4}$; full-minus-linear mean $= +2.58 \times 10^{-3}$.}
+\label{fig:expA_fidelity}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/expB_headline_crossover.png}
+\caption{Experiment B1: VQC vs.\ MPS fidelity at matched parameter budgets ($n = 8$: VQC $0.306$, MPS $0.990$; $n = 10$: VQC $0.210$, MPS $0.958$; $n = 12$: VQC $0.165$, MPS $0.878$). No positive crossover $n^*$ is observed at these sizes. Compression ratios are $10.7\times$ at $n = 8$, $34.1\times$ at $n = 10$, and $113.8\times$ at $n = 12$.}
+\label{fig:expB_headline}
+\end{figure}
+
+\subsection{MPS Scaling (Table-First View)}
+\label{sec:scaling}
+
+For the current artifact snapshot, Experiment~B3 has partial but non-trivial coverage (currently through $n=40$ for $\chi\in\{8,16,32\}$, single seed) and is represented as a table-first artifact. Table~\ref{tab:mps_scaling} reports generated values directly from \texttt{experiments/results/mps\_scaling.json}.
+
+\begin{table}[t]
+\centering
+\caption{Experiment B3 generated MPS scaling rows.}
+\label{tab:mps_scaling}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{$n$} & \textbf{$\chi$} & \textbf{$F_{\mathrm{MPS}}$} & \textbf{Comp.} & \textbf{Backend} & \textbf{Fallback} \\
+\midrule
+12 & 8 & 0.9953 & 3.12 & bluequbit\_mps & no \\
+24 & 8 & 0.3013 & 5890.88 & bluequbit\_mps & no \\
+24 & 16 & 0.4711 & 1481.04 & bluequbit\_mps & no \\
+24 & 32 & 0.6396 & 371.31 & bluequbit\_mps & no \\
+32 & 8 & 0.1341 & 1109237.42 & bluequbit\_mps & no \\
+32 & 16 & 0.3385 & 278460.02 & bluequbit\_mps & no \\
+32 & 32 & 0.6861 & 69759.73 & bluequbit\_mps & no \\
+40 & 8 & 0.0746 & 224573453.39 & bluequbit\_mps & no \\
+40 & 16 & 0.2069 & 56327439.95 & bluequbit\_mps & no \\
+40 & 32 & 0.7789 & 14104982.91 & bluequbit\_mps & no \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Amplitude Scaling (Table-First View)}
+
+Experiment~C is also clearer as a generated table in the current near-unity-fidelity regime for the completed rows ($n=8,10,12$). Table~\ref{tab:amplitude_detail} reports fidelity, TV, runtime, and backend provenance.
+
+\begin{table}[t]
+\centering
+\caption{Experiment C generated amplitude-scaling details.}
+\label{tab:amplitude_detail}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{$n$} & \textbf{Fidelity} & \textbf{TV} & \textbf{Time (s)} & \textbf{Backend} & \textbf{Fallback} \\
+\midrule
+8 & 1.000000 & 0.000000 & 2.92 & bluequbit\_sv & no \\
+10 & 1.000000 & 0.000000 & 3.91 & bluequbit\_sv & no \\
+12 & 1.000000 & 0.000000 & 12.71 & bluequbit\_sv & no \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/expD_ess_vs_gap.png}
+\caption{ESS ratio (Quantum/Single-Site Gibbs) vs.\ mixing-difficulty proxy (Gibbs spectral gap estimate) across 60 instances and 5 graph families. $R^2 = 0.016$, indicating weak global linear dependence and dominant family/topology effects. Mean ratio $16.59$, range $[9.45, 32.89]$.}
+\label{fig:expD_ess}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{Status of main experimental contributions in committed artifacts. ``Complete'' = results committed with full multi-seed coverage. ``Partial'' = some seeds/sizes committed, more needed. ``Open'' = not yet observed/established.}
+\label{tab:status}
+\begin{tabular}{p{3.2cm}p{1.4cm}p{3.0cm}}
+\toprule
+\textbf{Contribution} & \textbf{Status} & \textbf{Key metric / remaining target} \\
+\midrule
+ESS characterization (single-site + block Gibbs baselines, 5 families, 60 instances) & Complete with two baselines & Single-site mean $16.59$; block mean $7.00$ \\
+\addlinespace
+Amplitude fidelity ($n=8,10,12$) & Complete & $F \approx 1.000$ on BQ SV \\
+\addlinespace
+VQC compression ($n=8,10,12$) & Partial & $10.7\times$--$113.8\times$; needs $n=14,16$ \\
+\addlinespace
+VQC--MPS crossover $n^*$ & Open & Not observed at $n \leq 12$; target $n \in [14, 20]$ \\
+\addlinespace
+Clique entanglement advantage & Null at tested scales & Near-zero at current scales; demoted from contribution \\
+\addlinespace
+MPS scaling ($n \leq 40$, single seed) & Partial & Needs multi-seed and $n > 40$ coverage \\
+\addlinespace
+Hardware run & Deferred to follow-up & No real-device results in this submission \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion and Analysis}
+
+This section interprets the committed artifact results, then connects them to practical method-selection decisions and remaining limitations.
+
+\subsection{Key Findings and Insights}
+
+Three findings emerge from the committed artifacts, ordered by completeness:
+\begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=3pt, parsep=0pt]
+    \item \textbf{ESS gap persists but narrows with stronger baseline.} Quantum/Single-Site-Gibbs ESS ratios average $16.59$, while Quantum/Block-Gibbs averages $7.00$ across the same 60 instances.
+    \item \textbf{Compression is real but crossover is not yet found.} VQC achieves $10.7\times$--$113.8\times$ compression at $n = 8, 10, 12$, but fidelity remains below MPS at matched parameter budgets. Whether a positive crossover $n^*$ exists at larger $n$ remains the central open question.
+    \item \textbf{Clique entanglement effect is within noise at current scales.} Mean $\Delta F_{\mathrm{clique-linear}} = -2.28 \times 10^{-4}$, while full entanglement shows modest positive gain ($+2.58 \times 10^{-3}$). The theoretical motivation for clique matching remains valid; larger $n$ and denser graphs are needed to test it properly.
+\end{itemize}
+
+\subsection{Conceptual Understanding}
+\begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=2pt, parsep=0pt]
+    \item \textbf{Why quantum circuits generate independent samples.} Classical MCMC~\cite{brooks2011handbook} produces correlated samples because each depends on the previous state through a Markov transition kernel. Quantum amplitude encoding differs fundamentally: the circuit prepares $|\psi\rangle = \sum_x \sqrt{P_\theta(x)}|x\rangle$, and measurement collapses this superposition according to Born's rule, yielding outcome $x$ with probability $P_\theta(x)$. Each circuit execution starts from $|0\rangle^{\otimes n}$ and evolves independently, so there is no state dependence between successive samples. This architectural difference explains why quantum achieves $\tau \approx 1$ while MCMC requires many steps to decorrelate.
+    \item \textbf{Theoretical basis for variational compression.} The success of circuits with $O(nd)$ parameters in approximating $2^n$-dimensional probability vectors reflects the fact that MRF distributions, despite having exponentially many configurations, are constrained by clique factorization $P(\mathbf{x}) = \prod_C \psi_C(\mathbf{x}_C)$ to lower-dimensional manifolds. Parameterized circuits exploit this through an alternating-layer structure that implements a tensor-network decomposition~\cite{huggins2019towards}: single-qubit rotations parameterize local marginals, while entangling gates capture correlations---effectively factorizing the distribution in a manner analogous to how MRFs factorize over cliques. When entanglement matches graphical structure (the clique strategy), this factorization is particularly efficient.
+\end{itemize}
+
+\subsection{Strengths of Our Approach}
+\begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=2pt, parsep=0pt]
+    \item \textbf{Research-ready implementation.} Included benchmark runners and artifact checks validate training behavior, performance trends, and end-to-end functionality across representative model structures.
+    \item \textbf{Dual-mode flexibility.} The codebase supports exact-style amplitude state preparation for small-$n$ settings and variational compression studies for larger-$n$ settings, enabling accuracy/scalability trade-off analysis under a unified experiment pipeline.
+    \item \textbf{Performance optimizations.} Sparse-diagonal construction and careful backend handling make the current simulator-based workflow practical on commodity hardware for the published artifact regimes.
+    \item \textbf{Research integrity.} Honest benchmarking distinguishes scenarios where quantum and classical methods are equivalent from those where quantum-specific advantages dominate, avoiding inflated or misleading claims.
+    \item \textbf{Reproducibility.} Fixed random seeds, documented hyperparameters, and reproducible example scripts facilitate independent verification and extension.
+\end{itemize}
+
+\subsection{Limitations and Failure Modes}
+\begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=2pt, parsep=0pt]
+    \item \textbf{No exponential speedup.} Amplitude encoding requires classical computation of all $2^n$ probabilities, forgoing the potential exponential advantage of full QCGM Hamiltonian simulation. Implementing the ancilla-based real-part extraction needed for true exponential speedup would require an estimated $2$--$4$ weeks of additional engineering effort.
+    \item \textbf{Fidelity decay for large models.} In current scaling artifacts (see \texttt{figures/reviewer\_metrics.json}), fidelity generally declines as $n$ increases, highlighting the expressivity/optimization limits of shallow ans\"atze.
+    \item \textbf{Optimization scaling limits.} Parameter-shift training still requires repeated statevector evaluations and can become expensive as $n$ grows; for larger regimes, improved optimizers and lower-variance gradient strategies remain important future work.
+    \item \textbf{No physical-hardware noise modeling.} Our current experiments use simulator backends (Aer and BlueQubit simulator services). Deployment on real quantum hardware will require error mitigation such as readout correction, zero-noise extrapolation, and dynamical decoupling.
+    \item \textbf{Failure modes at $n = 12$.}
+        \begin{enumerate}[leftmargin=*]
+            \item \emph{Barren plateaus:} $72$ parameters for $4096$ states can lead to vanishing gradients ($\|\nabla L\| \sim O(1/2^{n/2})$)~\cite{mcclean2018barren}, slowing optimization.
+            \item \emph{Limited entanglement:} sparse topologies may fail to capture long-range correlations, while denser entanglement can increase training cost substantially.
+            \item \emph{Initialization sensitivity:} optimization outcomes vary by seed, indicating a non-trivial landscape of local minima.
+        \end{enumerate}
+    \item \textbf{What the ESS comparison does and does not show.}\label{sec:limitations_mcmc} The ESS experiments quantify autocorrelation costs for the implemented Gibbs baselines under this artifact protocol. They do not establish a universal quantum-over-classical advantage across stronger or differently optimized classical samplers.
+\end{itemize}
+
+\subsection{Method Selection Guidelines}
+\begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=2pt, parsep=0pt]
+    \item \textbf{Use amplitude encoding when} $n \le 10$, high-fidelity sampling is required, and $O(2^n)$ preprocessing is acceptable.
+    \item \textbf{Use variational compression when} exact-style preprocessing is too costly and approximate sampling is acceptable; expected fidelity and training cost should be read from generated artifacts for the target regime.
+    \item \textbf{Use classical methods when} the graph is tree-structured (the junction-tree algorithm is polynomial~\cite{lauritzen1988local}), only a single posterior query is needed (amortizing MCMC burn-in), or $n > 20$ (where variational circuits plateau and classical methods may be the only practical option).
+    \item \textbf{Quantum provides measurable advantage when} many independent samples are required (high ESS for variance reduction), real-time response is needed (no burn-in), parallel sampling with uncorrelated outputs is desired, or exact i.i.d.\ samples are needed for statistical testing.
+\end{itemize}
+
+\subsection{Future Directions}
+\begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=2pt, parsep=0pt]
+    \item \textbf{Full QCGM implementation.} Ancilla-based circuits~\cite{piatkowski2024qcgms} could enable a true exponential speedup via Hamiltonian simulation ($2$--$4$ weeks estimated effort).
+    \item \textbf{Hardware deployment.} Running on devices such as IBM Quantum and IonQ will require readout correction, zero-noise extrapolation, and dynamical decoupling. Experiments on $50$--$100$-qubit devices would provide the first practical performance data for quantum MRF sampling.
+    \item \textbf{Marginal-matching techniques.} Enforcing clique marginals $\hat{P}(\mathbf{x}_C) \approx P_\theta(\mathbf{x}_C)$ during variational training could improve fidelity for large models by an estimated $0.1$--$0.15$.
+    \item \textbf{Hybrid quantum-classical sampling.} Using quantum circuits for high-probability regions and classical MCMC for tail exploration could reduce computational cost while maintaining sample quality.
+    \item \textbf{Advanced optimization strategies.} For $n > 15$, lower-variance gradient estimators, improved optimizers, and schedule tuning are promising paths to more efficient training.
+\end{itemize}
+Longer-term, implementation of full QCGM on 50--100-qubit devices with error mitigation could bridge the gap between quantum simulation and practical quantum applications for probabilistic inference in computer vision, computational biology, and generative modeling.
+
+\section{Conclusion}
+
+We presented a dual-mode quantum sampling framework for discrete MRFs combining amplitude encoding with variational circuit compression, and reported three categories of committed findings. \emph{Primary:} quantum sampling shows a consistent ESS gap relative to the implemented Gibbs baselines across 60 instances and five graph families, with mean Quantum/Single-Site-Gibbs ratio $16.59$ and mean Quantum/Block-Gibbs ratio $7.00$. \emph{Secondary:} amplitude encoding achieves near-perfect fidelity at $n = 8, 10, 12$, validating the Hamiltonian construction and bit-ordering pipeline. \emph{In progress:} VQC delivers up to $113.8\times$ parameter reduction at $n = 12$ but remains below MPS in fidelity at matched parameter budgets; crossover $n^*$ is not yet established and remains the central open target, requiring runs at $n \in [14, 20]$ with multiple seeds. Table~\ref{tab:status} summarizes the full status. All code and artifacts are publicly available at \url{https://github.com/arulrhikm/QuantumDGM} under an MIT license.
+
+\section*{Reproducibility Note}
+This manuscript version inlines artifact values (for Overleaf portability) from outputs generated on \texttt{2026-04-25 22:32:16 UTC}. The source-of-truth machine-readable results are in \texttt{experiments/results/*.json} and \texttt{figures/paper\_table\_metrics.json}. Experiment seeds are listed in \texttt{experiments/seeds.json}. To refresh the underlying experiment outputs and regenerate artifact summaries, run:
+\begin{verbatim}
+python -m experiments.run_all_for_paper --fast
+python -m experiments.generate_paper_artifacts
+\end{verbatim}
+then copy updated values into this self-contained \texttt{paper.tex}.
+
+\section*{Acknowledgments}
+
+We thank the open-source quantum computing community for the tools that enabled this work. Code and documentation are available under an MIT license at \url{https://github.com/arulrhikm/QuantumDGM}.
+
+\begin{thebibliography}{00}
+
+\bibitem{li2009markov} S.~Z. Li, \emph{Markov Random Field Modeling in Image Analysis}, 3rd ed. London, U.K.: Springer, 2009.
+
+\bibitem{kamisetty2013coevolution} H.~Kamisetty, S.~Ovchinnikov, and D.~Baker, ``Assessing the utility of coevolution-based residue-residue contact predictions in a sequence- and structure-rich era,'' \emph{Proc. Natl. Acad. Sci. U.S.A.}, vol.~110, no.~39, pp.~15674--15679, 2013.
+
+\bibitem{salakhutdinov2009deep} R.~Salakhutdinov and G.~Hinton, ``Deep Boltzmann machines,'' in \emph{Proc. AISTATS}, 2009, pp.~448--455.
+
+\bibitem{geman1984stochastic} S.~Geman and D.~Geman, ``Stochastic relaxation, Gibbs distributions, and the Bayesian restoration of images,'' \emph{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~PAMI-6, no.~6, pp.~721--741, 1984.
+
+\bibitem{wainwright2008graphical} M.~J. Wainwright and M.~I. Jordan, ``Graphical models, exponential families, and variational inference,'' \emph{Found. Trends Mach. Learn.}, vol.~1, no.~1--2, pp.~1--305, 2008.
+
+\bibitem{pearl1988probabilistic} J.~Pearl, \emph{Probabilistic Reasoning in Intelligent Systems}. San Francisco, CA: Morgan Kaufmann, 1988.
+
+\bibitem{piatkowski2024qcgms} N.~Piatkowski and C.~Zoufal, ``On quantum circuits for discrete graphical models,'' \emph{Quantum Machine Intelligence}, vol.~6, art.~57, 2024.
+
+\bibitem{amin2018qbm} M.~H. Amin, E.~Andriyash, J.~Rolfe, B.~Kulchytskyy, and R.~Melko, ``Quantum Boltzmann machine,'' \emph{Phys. Rev. X}, vol.~8, no.~2, p.~021050, 2018.
+
+\bibitem{low2014bayes} G.~H. Low, T.~J. Yoder, and I.~L. Chuang, ``Quantum inference on Bayesian networks,'' \emph{Phys. Rev. A}, vol.~89, no.~6, p.~062315, 2014.
+
+\bibitem{verdon2019vqe} G.~Verdon, J.~Marks, S.~Nanda, S.~Leichenauer, and J.~Hidary, ``Quantum Hamiltonian-based models and the variational quantum thermalizer algorithm,'' \emph{arXiv:1910.02071}, 2019.
+
+\bibitem{layden2023qemcmc} D.~Layden, G.~Mazzola, R.~V. Mishmash, M.~Motta,
+P.~Wocjan, J.-S. Kim, and S.~Sheldon, ``Quantum-enhanced Markov chain Monte
+Carlo,'' \emph{Nature}, vol.~619, pp.~282--287, 2023.
+
+\bibitem{kandala2017hardware} A.~Kandala \emph{et al.}, ``Hardware-efficient variational quantum eigensolver for small molecules and quantum magnets,'' \emph{Nature}, vol.~549, pp.~242--246, 2017.
+
+\bibitem{schuld2019evaluating} M.~Schuld, V.~Bergholm, C.~Gogolin, J.~Izaac, and N.~Killoran, ``Evaluating analytic gradients on quantum hardware,'' \emph{Phys. Rev. A}, vol.~99, no.~3, p.~032331, 2019.
+
+\bibitem{mcclean2018barren} J.~R. McClean, S.~Boixo, V.~N. Smelyanskiy, R.~Babbush, and H.~Neven, ``Barren plateaus in quantum neural network training landscapes,'' \emph{Nat. Commun.}, vol.~9, no.~1, p.~4812, 2018.
+
+\bibitem{huggins2019towards} W.~Huggins, P.~Patel, K.~B. Whaley, and E.~M. Stoudenmire, ``Towards quantum machine learning with tensor networks,'' \emph{Quantum Sci. Technol.}, vol.~4, no.~2, p.~024001, 2019.
+
+\bibitem{liu2018differentiable} J.-G. Liu and L.~Wang, ``Differentiable learning of quantum circuit Born machines,'' \emph{Phys. Rev. A}, vol.~98, p.~062324, 2018.
+
+\bibitem{benedetti2019generative} M.~Benedetti, E.~Lloyd, S.~Sack, and M.~Fiorentini, ``A generative modeling approach for benchmarking and training shallow quantum circuits,'' \emph{npj Quantum Information}, vol.~5, art.~45, 2019.
+
+\bibitem{wittek2017quantum} P.~Wittek and C.~Gogolin, ``Quantum enhanced inference in Markov logic networks,'' \emph{Scientific Reports}, vol.~7, art.~45672, 2017.
+
+\bibitem{ferguson2025qemcmc} R.~Ferguson and P.~Wallden, ``Quantum-enhanced MCMC for systems larger than your quantum computer,'' \emph{Phys. Rev. Research}, vol.~7, p.~013231, 2025.
+
+\bibitem{geyer1992practical} C.~J. Geyer, ``Practical Markov chain Monte Carlo,'' \emph{Stat. Sci.}, vol.~7, no.~4, pp.~473--483, 1992.
+
+\bibitem{robert1999monte} C.~P. Robert and G.~Casella, \emph{Monte Carlo Statistical Methods}. New York: Springer, 1999.
+
+\bibitem{cowles1996markov} M.~K. Cowles and B.~P. Carlin, ``Markov chain Monte Carlo convergence diagnostics: a comparative review,'' \emph{J. Am. Stat. Assoc.}, vol.~91, no.~434, pp.~883--904, 1996.
+
+\bibitem{brooks2011handbook} S.~Brooks, A.~Gelman, G.~L. Jones, and X.-L. Meng, Eds., \emph{Handbook of Markov Chain Monte Carlo}. Boca Raton, FL: CRC Press, 2011.
+
+\bibitem{lauritzen1988local} S.~L. Lauritzen and D.~J. Spiegelhalter, ``Local computations with probabilities on graphical structures and their application to expert systems,'' \emph{J. R. Stat. Soc. Ser. B}, vol.~50, no.~2, pp.~157--224, 1988.
+
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,96 @@
+{
+  "scaling": [
+    {
+      "n": 6,
+      "fidelity": 0.5192364919854043,
+      "params": 36,
+      "compression": 1.7777777777777777,
+      "train_steps": 38
+    },
+    {
+      "n": 8,
+      "fidelity": 0.6174965516760599,
+      "params": 48,
+      "compression": 5.333333333333333,
+      "train_steps": 50
+    },
+    {
+      "n": 10,
+      "fidelity": 0.4672405089103631,
+      "params": 60,
+      "compression": 17.066666666666666,
+      "train_steps": 62
+    },
+    {
+      "n": 12,
+      "fidelity": 0.4936536342061089,
+      "params": 72,
+      "compression": 56.888888888888886,
+      "train_steps": 74
+    },
+    {
+      "n": 14,
+      "fidelity": 0.43813299761562435,
+      "params": 84,
+      "compression": 195.04761904761904,
+      "train_steps": 86
+    }
+  ],
+  "baselines": [
+    {
+      "n": 6,
+      "quantum_fidelity": 0.7443566949224217,
+      "mean_field_fidelity": 0.7101353579809169,
+      "quantum_singleton_mae": 0.10922506984833624,
+      "mean_field_singleton_mae": 0.14887999095386026,
+      "loopy_bp_singleton_mae": 0.14466210874661642
+    },
+    {
+      "n": 8,
+      "quantum_fidelity": 0.6637577671948514,
+      "mean_field_fidelity": 0.7871162834211983,
+      "quantum_singleton_mae": 0.09601331848566713,
+      "mean_field_singleton_mae": 0.12383264811053904,
+      "loopy_bp_singleton_mae": 0.123861220411351
+    },
+    {
+      "n": 10,
+      "quantum_fidelity": 0.5562135552356201,
+      "mean_field_fidelity": 0.6063204358283737,
+      "quantum_singleton_mae": 0.11089836275068761,
+      "mean_field_singleton_mae": 0.15645860428703612,
+      "loopy_bp_singleton_mae": 0.15591845149641653
+    }
+  ],
+  "gradients": [
+    {
+      "n": 6,
+      "mean_abs_partial_grad": 0.1206283917316725,
+      "l2_partial_grad_norm": 0.26981121877673864
+    },
+    {
+      "n": 8,
+      "mean_abs_partial_grad": 0.1736759577122271,
+      "l2_partial_grad_norm": 0.4056483893762159
+    },
+    {
+      "n": 10,
+      "mean_abs_partial_grad": 0.025809753028349647,
+      "l2_partial_grad_norm": 0.062202461431108844
+    },
+    {
+      "n": 12,
+      "mean_abs_partial_grad": 0.07210606065205516,
+      "l2_partial_grad_norm": 0.20702929914725712
+    },
+    {
+      "n": 14,
+      "mean_abs_partial_grad": 0.07324170247710593,
+      "l2_partial_grad_norm": 0.19743624454645453
+    }
+  ],
+  "variance_headline": {
+    "vs_gibbs": 6.5,
+    "vs_strong_mcmc_proxy": 2.5
+  }
+}

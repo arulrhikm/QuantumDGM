@@ -1,0 +1,164 @@
+{
+  "generated_on_utc": "2026-04-26 21:26:15",
+  "amplitude": [
+    {
+      "n": 8,
+      "states": 256,
+      "fidelity_mean": 1.0000000370494333,
+      "time_mean_s": 2.923963699984597
+    },
+    {
+      "n": 10,
+      "states": 1024,
+      "fidelity_mean": 0.9999999905668155,
+      "time_mean_s": 3.906618899985915
+    },
+    {
+      "n": 12,
+      "states": 4096,
+      "fidelity_mean": 1.0000001397279035,
+      "time_mean_s": 12.706921700009843
+    }
+  ],
+  "amplitude_detail": [
+    {
+      "n": 8,
+      "fidelity_mean": 1.0000000370494333,
+      "tv_mean": 0.0,
+      "time_mean_s": 2.923963699984597,
+      "backend": "bluequbit_sv",
+      "any_fallback": false
+    },
+    {
+      "n": 10,
+      "fidelity_mean": 0.9999999905668155,
+      "tv_mean": 0.0,
+      "time_mean_s": 3.906618899985915,
+      "backend": "bluequbit_sv",
+      "any_fallback": false
+    },
+    {
+      "n": 12,
+      "fidelity_mean": 1.0000001397279035,
+      "tv_mean": 0.0,
+      "time_mean_s": 12.706921700009843,
+      "backend": "bluequbit_sv",
+      "any_fallback": false
+    }
+  ],
+  "delta_density_summary": {
+    "n_pairs": 36,
+    "delta_mean": -0.00022802748113145245,
+    "slope": -0.0002623002260887669,
+    "r2": 0.0006547053146508386
+  },
+  "fair": [
+    {
+      "method": "Quantum VQC (linear)",
+      "fidelity": 0.2595511593370444,
+      "notes": "n=10"
+    },
+    {
+      "method": "Quantum VQC (clique)",
+      "fidelity": 0.2589147761539791,
+      "notes": "n=10"
+    },
+    {
+      "method": "Quantum VQC (full)",
+      "fidelity": 0.26290477602075873,
+      "notes": "n=10"
+    }
+  ],
+  "timing": [
+    {
+      "method": "VQC train+eval",
+      "time_s": 317.5561250333364,
+      "notes": "Experiment B"
+    },
+    {
+      "method": "MPS sampling",
+      "time_s": 105.7172475666933,
+      "notes": "Experiment B"
+    }
+  ],
+  "compression": [
+    {
+      "n": 8,
+      "vqc_params": 24,
+      "mps_params": 56,
+      "f_vqc": 0.30567562941114107,
+      "f_mps": 0.9895104475817986,
+      "compression_vqc": 10.666666666666666
+    },
+    {
+      "n": 10,
+      "vqc_params": 30,
+      "mps_params": 72,
+      "f_vqc": 0.20987639504459527,
+      "f_mps": 0.958296692592293,
+      "compression_vqc": 34.13333333333333
+    },
+    {
+      "n": 12,
+      "vqc_params": 36,
+      "mps_params": 88,
+      "f_vqc": 0.16502840926014295,
+      "f_mps": 0.8781539984696501,
+      "compression_vqc": 113.77777777777777
+    }
+  ],
+  "mps_scaling": [
+    {
+      "n": 24,
+      "chi": 8,
+      "n_trials": 1,
+      "f_mps_mean": 0.507600468111638,
+      "f_mps_std": 0.0,
+      "f_mps_ci95": 0.0,
+      "compression_mean": 5890.876404494382,
+      "compression_std": 0.0,
+      "compression_ci95": 0.0,
+      "backend": "bluequbit_mps",
+      "any_fallback": false
+    },
+    {
+      "n": 24,
+      "chi": 16,
+      "n_trials": 1,
+      "f_mps_mean": 0.7399976595996188,
+      "f_mps_std": 0.0,
+      "f_mps_ci95": 0.0,
+      "compression_mean": 1481.0395480225989,
+      "compression_std": 0.0,
+      "compression_ci95": 0.0,
+      "backend": "bluequbit_mps",
+      "any_fallback": false
+    }
+  ],
+  "ess_summary": {
+    "n_instances": 1,
+    "n_families": 1,
+    "mean_ratio": 13.052632945385726,
+    "median_ratio": 13.052632945385726,
+    "min_ratio": 13.052632945385726,
+    "max_ratio": 13.052632945385726,
+    "mean_ratio_single": 13.052632945385726,
+    "median_ratio_single": 13.052632945385726,
+    "min_ratio_single": 13.052632945385726,
+    "max_ratio_single": 13.052632945385726,
+    "mean_ratio_block": 9.586638578153236,
+    "median_ratio_block": 9.586638578153236,
+    "min_ratio_block": 9.586638578153236,
+    "max_ratio_block": 9.586638578153236,
+    "mean_ratio_tuned_block": 1.7915121690876232,
+    "median_ratio_tuned_block": 1.7915121690876232,
+    "min_ratio_tuned_block": 1.7915121690876232,
+    "max_ratio_tuned_block": 1.7915121690876232,
+    "ess_per_sec_quantum_mean": 889.1259832278924,
+    "ess_per_sec_single_gibbs_mean": 4.151447907682508,
+    "ess_per_sec_block_gibbs_mean": 0.09010613127256291,
+    "ess_per_sec_tuned_block_gibbs_mean": 0.4641321664171364,
+    "slope": 0.0,
+    "r2": 0.0
+  }
+}

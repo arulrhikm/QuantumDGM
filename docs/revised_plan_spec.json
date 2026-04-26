@@ -1,0 +1,67 @@
+{
+  "source": "revised_plan.tex",
+  "canonical_manuscript": "paper.tex",
+  "artifact_roots": {
+    "results": "experiments/results",
+    "figures": "figures"
+  },
+  "tier1": [
+    "Populate generated table macros and metadata for manuscript tables",
+    "Use IEEEtran conference 10pt class",
+    "Replace or cut depth table with reproducible statement"
+  ],
+  "experiments": {
+    "A": {
+      "name": "Clique entanglement sweep",
+      "required_outputs": [
+        "experiments/results/entanglement_sweep.json",
+        "figures/expA_fidelity_vs_n.png",
+        "figures/expA_deltaF_vs_density.png",
+        "figures/expA_fidelity_per_cx.png"
+      ]
+    },
+    "B": {
+      "name": "VQC vs MPS crossover",
+      "required_outputs": [
+        "experiments/results/large_n_comparison.json",
+        "experiments/results/mps_scaling.json",
+        "figures/expB_headline_crossover.png",
+        "figures/expB_compression_curve.png",
+        "figures/expB_mps_vs_chi.png"
+      ]
+    },
+    "C": {
+      "name": "Amplitude scaling to n=34",
+      "required_outputs": [
+        "experiments/results/amplitude_scaling.json",
+        "figures/expC_amplitude_scaling.png"
+      ]
+    },
+    "D": {
+      "name": "ESS vs mixing difficulty",
+      "required_outputs": [
+        "experiments/results/ess_sweep.json",
+        "figures/expD_ess_vs_gap.png"
+      ]
+    },
+    "E": {
+      "name": "Fidelity decomposition",
+      "required_outputs": [
+        "experiments/results/fidelity_decomposition.json"
+      ]
+    },
+    "F": {
+      "name": "Marginal matching loss",
+      "required_outputs": [
+        "experiments/results/marginal_matching.json"
+      ]
+    }
+  },
+  "minimum_path": [
+    "tier1",
+    "A",
+    "B_through_n32",
+    "C",
+    "paper_restructure"
+  ]
+}

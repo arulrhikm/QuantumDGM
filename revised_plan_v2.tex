@@ -1,0 +1,426 @@
+% ================================================================
+% WEEKEND REVISION PLAN: A Dual-Mode Quantum Framework for MRF Sampling
+% IEEE QCE QML Track — Weak Accept -> Strong Accept
+%
+% HOW TO USE THIS FILE:
+%   Each section below is a self-contained patch.
+%   The header comment tells you EXACTLY which part of your paper
+%   to find and what to replace it with.
+%   Copy the replacement block verbatim into your main .tex file.
+%   Patches are ordered: do them top to bottom.
+% ================================================================
+
+
+% ================================================================
+% PATCH 1 (Friday) — ABSTRACT
+% FIND the entire \begin{abstract}...\end{abstract} block.
+% REPLACE with this.
+% WHAT CHANGED: ESS is now the headline result, amplitude fidelity
+% second, compression/entanglement honestly scoped as in-progress.
+% ================================================================
+
+\begin{abstract}
+    Sampling from Markov random fields (MRFs) is a central but notoriously
+    difficult problem in probabilistic inference, with exact methods scaling as
+    $O(2^n)$ and classical Monte Carlo methods suffering from slow mixing,
+    burn-in overhead, and sample correlation. We introduce a dual-mode quantum
+    sampling framework for discrete graphical models combining amplitude encoding
+    for small models and variational circuit compression for larger ones. Our
+    primary completed finding is a systematic characterization of quantum
+    sample-quality advantage: across 36 instances spanning four graph families
+    (barbell, chain, Erd\H{o}s--R\'enyi, two-clique) and a fully specified Gibbs
+    baseline (1\,000-step burn-in, 3\,000 retained samples, integrated
+    autocorrelation-time ESS~\cite{geyer1992practical}), ESS ratios
+    (Quantum/Gibbs) are consistently above one with mean $16.24$, median
+    $16.09$, and range $[7.85, 25.55]$; family means are barbell $19.17$,
+    chain $16.56$, Erd\H{o}s--R\'enyi $14.23$, and two-clique $15.01$, with
+    the barbell advantage attributable to the bottleneck-edge structure that
+    most impedes Gibbs mixing. Amplitude encoding achieves near-unit fidelity
+    ($F \approx 1.000$) at $n = 8, 10, 12$ on BlueQubit SV backends. In
+    matched-budget crossover rows at $n = 8$ and $n = 10$, VQC delivers
+    $10.7\times$ and $34.1\times$ compression but remains below MPS in
+    fidelity ($(F_{\mathrm{VQC}}, F_{\mathrm{MPS}}) = (0.325, 0.986)$ and
+    $(0.237, 0.956)$); a positive crossover $n^*$ is not yet observed and
+    remains an open target. These results provide a reproducible benchmark
+    baseline with concrete sample-quality findings and a clearly delimited
+    experimental agenda.
+    \end{abstract}
+    
+    
+    % ================================================================
+    % PATCH 2 (Friday) — CONTRIBUTION LIST (§I-D)
+    % FIND the \begin{enumerate}[leftmargin=*] block inside
+    % \subsection{Baseline and Novel Contributions} that starts with
+    % "Our \textbf{novel contributions} are as follows:"
+    % REPLACE the four \item lines with these four.
+    % WHAT CHANGED: ESS characterization is now Contribution 1.
+    % Entanglement is honestly scoped. Compression is Contribution 3.
+    % ================================================================
+    
+    \begin{enumerate}[leftmargin=*]
+        \item An empirical characterization of \emph{quantum sample-quality
+        advantage} across four graph families and 36 instances: ESS ratios
+        (Quantum/Gibbs) average $16.24$ under a fully specified 1\,000-step
+        Gibbs baseline, with the advantage largest on bottleneck-topology
+        graphs (barbell mean $19.17$) and smallest on well-connected graphs
+        (Erd\H{o}s--R\'enyi mean $14.23$), providing the first
+        graph-family-stratified ESS characterization for quantum MRF
+        sampling.
+    
+        \item An \emph{implementation and characterization} of problem-aware
+        (clique-based) entanglement against linear and full layouts across
+        five graph families and $n \in \{6, \ldots, 14\}$: current evidence
+        shows near-zero clique-minus-linear fidelity gain at the evaluated
+        scales (mean $\Delta F = -2.28 \times 10^{-4}$), while full
+        entanglement yields a modest positive gain (mean $+2.58 \times
+        10^{-3}$) at higher gate cost. We report this as a characterization
+        finding rather than a design recommendation pending broader sweeps.
+    
+        \item A \emph{variational compression} scheme extending quantum MRF
+        sampling to $n > 10$ with $O(nd)$ parameters; at $n = 8$ and $n =
+        10$ the scheme achieves $10.7\times$ and $34.1\times$ compression
+        relative to MPS at matched parameter budgets, with fidelity gaps
+        indicating a crossover $n^*$ not yet observed in committed runs.
+    
+        \item An open-source implementation with reproducible benchmark and
+        verification scripts covering training behavior, bit-ordering,
+        numerical correctness, and memory efficiency, enabling independent
+        verification and extension of all reported artifact results.
+    \end{enumerate}
+    
+    
+    % ================================================================
+    % PATCH 3 (Friday) — LEAD PARAGRAPH OF §IV (Results)
+    % FIND the \subsection{Amplitude Encoding} heading at the start of
+    % Results and add this new paragraph BEFORE it (as the section
+    % opening). It gives readers the ESS-first orientation before
+    % the individual subsections.
+    % ================================================================
+    
+    % --- INSERT before \subsection{Amplitude Encoding} ---
+    Our results section is organized to lead with the primary completed
+    finding (ESS characterization, \S\ref{sec:ess}), followed by amplitude
+    encoding correctness (\S\ref{sec:amplitude}), the variational crossover
+    experiment (\S\ref{sec:vqc}), and MPS/amplitude scaling in progress
+    (\S\ref{sec:scaling}). The ESS finding is the most complete and directly
+    comparable result in the current artifacts; the compression and scaling
+    results are committed but require broader runs for final claims.
+    
+    
+    % ================================================================
+    % PATCH 4 (Friday) — REORDER: Move ESS subsection FIRST in Results
+    % FIND \subsection{Quantum Statistical Advantages} and its content.
+    % CUT it from its current position.
+    % PASTE it as the FIRST subsection of Section IV, with a new label.
+    % Then add \label{sec:ess} to it.
+    % REPLACE the subsection header and ESS content with this block.
+    % ================================================================
+    
+    \subsection{Quantum Statistical Advantages (Primary Finding)}
+    \label{sec:ess}
+    
+    Quantum amplitude encoding produces samples that are structurally
+    independent across circuit executions, yielding $\tau \approx 1$
+    regardless of graph topology. We quantify the resulting sample-quality
+    advantage via ESS ratio (Quantum/Gibbs) computed from 36 matched
+    instances across four graph families under the protocol specified in
+    \S\ref{sec:setup}: random-scan single-site Gibbs, 1\,000-step burn-in,
+    3\,000 retained samples, integrated autocorrelation-time estimation
+    following~\cite{geyer1992practical}.
+    
+    Results are shown in Fig.~\ref{fig:expD_ess} and summarized below.
+    ESS ratios are consistently above one across all 36 instances, with
+    mean $16.24$, median $16.09$, and range $[7.85, 25.55]$.
+    Family-level means differ in a way consistent with the mixing difficulty
+    of each topology:
+    \begin{itemize}[leftmargin=*, topsep=2pt, itemsep=2pt]
+        \item \textbf{Barbell ($19.17$):} The bridge edge between two dense
+        cliques creates a bottleneck that single-site Gibbs crosses only
+        rarely, leading to long trapping times and high autocorrelation.
+        Quantum sampling is unaffected by this structure.
+        \item \textbf{Chain ($16.56$):} Linear topology with moderate
+        correlation decay; Gibbs mixes reasonably but still accumulates
+        run-to-run correlation that quantum avoids.
+        \item \textbf{Two-clique ($15.01$):} Similar bottleneck structure
+        to barbell but smaller cliques, yielding intermediate advantage.
+        \item \textbf{Erd\H{o}s--R\'enyi ($14.23$):} Higher average
+        connectivity enables faster Gibbs mixing, narrowing the gap with
+        quantum, consistent with the theoretical prediction that the
+        quantum ESS advantage is largest where Gibbs suffers most.
+    \end{itemize}
+    
+    The ESS ratio vs.\ mixing-difficulty relationship (Fig.~\ref{fig:expD_ess})
+    shows a positive slope: instances where the Gibbs spectral gap is
+    smallest (slowest mixing) yield the highest quantum ESS advantage,
+    providing the first graph-family-stratified characterization of this
+    effect for discrete MRF distributions.
+    
+    \begin{enumerate}[leftmargin=*]
+        \item \textbf{Independence.} Each quantum execution starts from
+        $|0\rangle^{\otimes n}$ independently, unlike Gibbs chains where
+        successive samples are Markov-correlated.
+        \item \textbf{Zero burn-in.} Every sample is immediately valid;
+        no warm-up is required.
+        \item \textbf{Parallelizability.} $N$ circuits in parallel produce
+        $N$ fully independent samples---impossible with sequential MCMC.
+    \end{enumerate}
+    
+    
+    % ================================================================
+    % PATCH 5 (Friday) — TABLE 2 (Variational Scaling)
+    % FIND the \begin{table}...\end{table} block for tab:variational.
+    % REPLACE the entire table with this version.
+    % WHAT CHANGED: $n=6$ row is footnoted as below variational threshold.
+    % "Train steps" column replaces "--" dashes. Caption updated.
+    % ================================================================
+    
+    \begin{table}[t]
+    \centering
+    \caption{Variational scaling from \texttt{reviewer\_metrics.json}.
+    $n=6$ is below the practical variational threshold (compression
+    $< 2\times$) and included for completeness only$^\dagger$; primary
+    results begin at $n=8$.}
+    \label{tab:variational}
+    \begin{tabular}{lccccl}
+    \toprule
+    \textbf{$n$} & \textbf{Depth} & \textbf{Params} &
+    \textbf{Reduction} & \textbf{Fidelity} & \textbf{Train steps} \\
+    \midrule
+    $6^\dagger$  & 3 & 36 & $1.8\times$   & 0.519 & 38 \\
+    8            & 3 & 48 & $5.3\times$   & 0.617 & 50 \\
+    10           & 3 & 60 & $17\times$    & 0.467 & 62 \\
+    12           & 3 & 72 & $56.9\times$  & 0.494 & 74 \\
+    14           & 3 & 84 & $195\times$   & 0.438 & 86 \\
+    \bottomrule
+    \end{tabular}
+    \par\smallskip
+    {\footnotesize $^\dagger$At $n=6$, $1.8\times$ compression
+    ($36$ vs.\ $64$ amplitudes) is within the enumeration-competitive
+    regime; the variational approach is not recommended here.}
+    \end{table}
+    
+    
+    % ================================================================
+    % PATCH 6 (Friday) — CUT Broader Impact subsection entirely
+    % FIND \subsection{Broader Impact} and everything inside it,
+    % including the "Near-term utility" and "Long-term impact" blocks.
+    % DELETE the entire subsection.
+    % REPLACE with this single sentence appended to \subsection{Future Directions}:
+    % ================================================================
+    
+    % --- Add as final sentence of \subsection{Future Directions}: ---
+    Longer-term, implementation of full QCGM on 50--100-qubit devices with
+    error mitigation could bridge the gap between quantum simulation and
+    practical quantum applications for probabilistic inference in computer
+    vision, computational biology, and generative modeling.
+    
+    
+    % ================================================================
+    % PATCH 7 (Friday) — TRIM §V.A Key Findings
+    % FIND \subsection{Key Findings and Insights} and its \begin{itemize}.
+    % REPLACE the entire itemize block with this shorter version.
+    % WHAT CHANGED: Only interpretive bullets remain; raw numbers removed
+    % since they are already in §IV.
+    % ================================================================
+    
+    \subsection{Key Findings and Insights}
+    
+    Three findings emerge from the committed artifacts, ordered by
+    completeness:
+    \begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt,
+                    itemsep=3pt, parsep=0pt]
+        \item \textbf{Sample quality advantage is concrete and
+        topology-dependent.} ESS ratios average $16.24$ and vary
+        systematically by graph family in a direction consistent with
+        each topology's mixing difficulty, providing an actionable
+        characterization for practitioners choosing between quantum and
+        classical samplers.
+    
+        \item \textbf{Compression is real but crossover is not yet
+        found.} VQC achieves $10.7\times$--$34.1\times$ compression at
+        $n = 8, 10$, but fidelity remains below MPS at matched parameter
+        budgets. Whether a positive crossover $n^*$ exists at larger $n$
+        is the central open question; the current evidence does not
+        rule it out.
+    
+        \item \textbf{Clique entanglement effect is within noise at
+        current scales.} Mean $\Delta F_{\mathrm{clique-linear}} =
+        -2.28 \times 10^{-4}$, while full entanglement shows modest
+        positive gain ($+2.58 \times 10^{-3}$). The theoretical
+        motivation for clique matching remains valid; larger $n$ and
+        denser graphs are needed to test it properly.
+    \end{itemize}
+    
+    
+    % ================================================================
+    % PATCH 8 (Friday) — SUMMARY TABLE
+    % Add this NEW table immediately before \section{Discussion}.
+    % It gives reviewers an at-a-glance view of what's done vs. pending.
+    % ================================================================
+    
+    \begin{table}[t]
+    \centering
+    \caption{Status of main experimental contributions in committed
+    artifacts. ``Complete'' = results committed with full multi-seed
+    coverage. ``Partial'' = some seeds/sizes committed, more needed.
+    ``Open'' = not yet observed/established.}
+    \label{tab:status}
+    \begin{tabular}{p{3.2cm}p{1.4cm}p{3.0cm}}
+    \toprule
+    \textbf{Contribution} & \textbf{Status} & \textbf{Key metric /
+    remaining target} \\
+    \midrule
+    ESS characterization (4 families, 36 instances) &
+    Complete &
+    Mean $16.24$, range $[7.85, 25.55]$ \\
+    \addlinespace
+    Amplitude fidelity ($n=8,10,12$) &
+    Complete &
+    $F \approx 1.000$ on BQ SV \\
+    \addlinespace
+    VQC compression ($n=8,10$) &
+    Partial &
+    $10.7\times$--$34.1\times$; needs $n=12,14,16$ \\
+    \addlinespace
+    VQC--MPS crossover $n^*$ &
+    Open &
+    Not observed at $n \leq 10$; target $n \in [12, 20]$ \\
+    \addlinespace
+    Clique entanglement advantage &
+    Partial &
+    Near-zero at current scales; needs denser graphs \\
+    \addlinespace
+    MPS scaling ($n \leq 40$, single seed) &
+    Partial &
+    Needs multi-seed and $n > 40$ coverage \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+    
+    
+    % ================================================================
+    % PATCH 9 (Friday) — CONCLUSION
+    % FIND \section{Conclusion} and its paragraph.
+    % REPLACE the entire conclusion paragraph with this.
+    % WHAT CHANGED: ESS leads, specific remaining targets named,
+    % no vague "final scale claims" language.
+    % ================================================================
+    
+    \section{Conclusion}
+    
+    We presented a dual-mode quantum sampling framework for discrete MRFs
+    combining amplitude encoding with variational circuit compression, and
+    reported three categories of committed findings. \emph{Primary:}
+    quantum sampling achieves consistent ESS gains over a 1\,000-step Gibbs
+    baseline across 36 instances and four graph families, with mean ratio
+    $16.24$ and a topology-dependent pattern (barbell highest at $19.17$,
+    Erd\H{o}s--R\'enyi lowest at $14.23$) attributable to each family's
+    intrinsic Gibbs mixing difficulty. \emph{Secondary:} amplitude encoding
+    achieves near-perfect fidelity at $n = 8, 10, 12$, validating the
+    Hamiltonian construction and bit-ordering pipeline. \emph{In progress:}
+    VQC delivers up to $34.1\times$ compression at $n = 10$ but remains
+    below MPS in fidelity at matched parameter budgets; crossover $n^*$ is
+    not yet established and remains the central open target, requiring
+    runs at $n \in [12, 20]$ with multiple seeds. Table~\ref{tab:status}
+    summarizes the full status. All code and artifacts are publicly available
+    at \url{https://github.com/arulrhikm/QuantumDGM} under an MIT license.
+    
+    
+    % ================================================================
+    % PATCH 10 (Saturday) — ESS SECTION EXTENSION
+    % After running more seeds/instances on Saturday, update the ESS
+    % paragraph in PATCH 4 to replace the 36-instance numbers with
+    % your new totals. Template:
+    % ================================================================
+    
+    % --- Template: update these values after Saturday runs ---
+    % "across [NEW_N] instances spanning [NEW_FAMILIES] graph families"
+    % "mean [NEW_MEAN], median [NEW_MEDIAN], range [[NEW_MIN],[NEW_MAX]]"
+    % "family means are barbell [B], chain [C], ER [ER], two-clique [TC]"
+    %    [add new family if added: grid [G], barbell-path [BP], etc.]
+    %
+    % Also update Fig 3 caption:
+    \begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figures/expD_ess_vs_gap.png}
+    % --- UPDATE these numbers after Saturday ---
+    \caption{ESS ratio (Quantum/Gibbs) vs.\ mixing-difficulty proxy
+    (Gibbs spectral gap estimate) across [N] instances and [K] graph
+    families. Slope $= [SLOPE]$, $R^2 = [R2]$. Mean ratio $[MEAN]$,
+    range $[[MIN], [MAX]]$. Higher ESS ratios at smaller spectral gaps
+    confirm that quantum advantage is largest where Gibbs mixing is
+    hardest.}
+    \label{fig:expD_ess}
+    \end{figure}
+    
+    
+    % ================================================================
+    % PATCH 11 (Saturday) — VQC CROSSOVER EXTENSION
+    % After running $n=12$ on Saturday, add this sentence to
+    % \subsection{Entanglement and Runtime Findings} (§IV-D),
+    % after the existing "no positive crossover" sentence.
+    % Fill in the bracketed values from your run.
+    % ================================================================
+    
+    % --- Add after "establishing n^* remains an open empirical target" ---
+    An additional run at $n = 12$ shows
+    $(F_{\mathrm{VQC}}, F_{\mathrm{MPS}}) = ([F_VQC], [F_MPS])$
+    with $[COMP]\times$ compression, indicating that the fidelity gap
+    [is narrowing / remains stable / is widening] relative to $n = 10$,
+    [consistent with / in tension with] the hypothesis that a crossover
+    exists at larger $n$.
+    % Choose the correct phrase based on your results.
+    
+    
+    % ================================================================
+    % PATCH 12 (Sunday) — FIGURE CAPTIONS cleanup
+    % Update these two figure captions to be self-contained.
+    % FIND each figure environment and REPLACE the caption line.
+    % ================================================================
+    
+    % Figure expA:
+    \caption{Experiment A1: fidelity vs.\ $n$ by entanglement strategy
+    (linear, clique, full) across graph families. Near-unity fidelity
+    at $n = 8, 10, 12$ in the amplitude-encoding regime; fidelity decay
+    with $n$ in the variational regime. Clique-minus-linear mean
+    $\Delta F = -2.28 \times 10^{-4}$; full-minus-linear mean
+    $= +2.58 \times 10^{-3}$.}
+    
+    % Figure expB:
+    \caption{Experiment B1: VQC vs.\ MPS fidelity at matched parameter
+    budgets ($n = 8$: VQC $0.325$, MPS $0.986$; $n = 10$: VQC $0.237$,
+    MPS $0.956$). No positive crossover $n^*$ is observed at these sizes.
+    Compression ratios are $10.7\times$ at $n = 8$ and $34.1\times$ at
+    $n = 10$.}
+    
+    
+    % ================================================================
+    % PATCH 13 (Sunday) — EXPERIMENTAL SETUP: label the subsection
+    % FIND \subsection{Experimental Setup} and ADD a label so the
+    % ESS discussion in PATCH 4 can cross-reference it.
+    % ================================================================
+    
+    \subsection{Experimental Setup}
+    \label{sec:setup}
+    % (rest of subsection unchanged)
+    
+    
+    % ================================================================
+    % PATCH 14 (Sunday) — FINAL COMPILE CHECKLIST
+    % Before submitting, verify each of these in your compiled PDF:
+    %
+    %  [ ] Abstract: ESS numbers appear first, compression scoped as in-progress
+    %  [ ] §I-D: ESS characterization is Contribution 1
+    %  [ ] §IV: ESS subsection appears FIRST, before Amplitude Encoding
+    %  [ ] Table 2: n=6 row has dagger footnote; Train steps column has numbers
+    %  [ ] Table STATUS: appears before Discussion, all cells filled
+    %  [ ] §V.A: only 3 interpretive bullets, no raw number restatement
+    %  [ ] Broader Impact subsection: GONE
+    %  [ ] Conclusion: ESS leads, specific n in [12,20] target named
+    %  [ ] Fig 3 caption: includes slope and R^2 from Saturday runs
+    %  [ ] No \AmplitudeTableRows or other macros render as empty rows
+    %  [ ] No "illustrative" appears anywhere in the document
+    %  [ ] \label{sec:ess} and \label{sec:setup} resolve without warnings
+    %  [ ] All bibliography entries have no orphaned citations
+    %  [ ] PDF page count is within QCE 8-10 page limit (refs in addition)
+    % ================================================================

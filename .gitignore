@@ -149,8 +149,7 @@ cython_debug/
 qiskit_cache/
 
 # Project specific
-examples/figures/*.png
-!examples/figures/.gitkeep
+figures/*.png
 *.pkl
 *.h5
 *.hdf5

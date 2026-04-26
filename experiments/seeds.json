@@ -1,0 +1,9 @@
+{
+  "entanglement_sweep": [0, 1, 2],
+  "large_n_comparison": [0],
+  "ess_sweep": [0, 1, 2, 3],
+  "mps_scaling": [0],
+  "amplitude_scaling": [0],
+  "fidelity_decomposition": [0],
+  "marginal_matching": [0]
+}

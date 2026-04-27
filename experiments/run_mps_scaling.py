@@ -6,6 +6,8 @@ import os
 import sys
 from pathlib import Path
 
+# os.environ["BLUEQUBIT_MAIN_ENDPOINT"] = "https://dev.app.bluequbit.io/api/v1"
+
 # Allow `python experiments/run_mps_scaling.py` or running from inside experiments/.
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:

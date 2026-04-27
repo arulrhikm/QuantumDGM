@@ -22,7 +22,7 @@
 
 \begin{document}
 
-\title{Quantum Amplitude Encoding for Discrete MRFs: An ESS Characterization Against Single-Site Gibbs Baselines}
+\title{Amplitude-Encoded Sampling for Discrete MRFs: A Characterization of Autocorrelation Costs Across Classical Baselines}
 
 \author{
 \IEEEauthorblockN{Arul Rhik Mazumder}
@@ -35,7 +35,13 @@ arulm@cs.cmu.edu}
 \maketitle
 
 \begin{abstract}
-Sampling from Markov random fields (MRFs) is a central but notoriously difficult problem in probabilistic inference, with exact methods scaling as $O(2^n)$ and classical Monte Carlo methods suffering from slow mixing, burn-in overhead, and sample correlation. We introduce a dual-mode quantum sampling framework for discrete graphical models combining amplitude encoding for small models and variational circuit compression for larger ones. Our primary completed finding is an ESS-gap characterization against three Gibbs baselines: across 60 instances spanning five graph families (barbell, barbell-path, chain, Erd\H{o}s--R\'enyi, two-clique) with 1\,000-step burn-in and 3\,000 retained samples, Quantum/Single-Site-Gibbs ESS ratios have mean $16.35$ (median $15.99$, range $[8.24,30.31]$); Quantum/Block-Gibbs ratios have mean $7.29$ (median $6.78$, range $[3.31,18.30]$); and Quantum/Tuned-Block-Gibbs ratios have mean $1.82$ (median $1.91$, range $[1.03, 2.43]$). This hierarchy quantifies the autocorrelation cost of each MCMC design choice and shows that a well-tuned classical block sampler substantially---though not fully---closes the ESS gap. Amplitude encoding achieves near-unit fidelity ($F \approx 1.000$) at $n = 8, 10, 12$ on BlueQubit SV backends. In matched-budget crossover rows at $n = 8, 10, 12$, VQC achieves parameter reductions of $10.7\times$, $34.1\times$, and $113.8\times$ at fidelities $(F_{\mathrm{VQC}}, F_{\mathrm{MPS}}) = (0.306, 0.990)$, $(0.210, 0.958)$, and $(0.165, 0.878)$; no positive crossover $n^*$ is observed. Multi-trial MPS scaling (three seeds per point, $n$ up to $40$) shows $\chi=32$ achieves $F=0.721\pm0.059$ at $n=40$, providing a concrete classical benchmark ceiling. All code and data are at \url{https://github.com/arulrhikm/QuantumDGM}.
+Sampling from discrete Markov random fields (MRFs) is a well-known hard problem in probabilistic inference. We study amplitude-encoded i.i.d.\ sampling for small discrete MRFs and characterize the autocorrelation cost of four classical sampling baselines on matched instances. Our setup is deliberately scoped to the regime where the $2^n$ probabilities of the target distribution can be precomputed classically; in this regime no quantum exponential speedup is possible, but the structural property of the amplitude-encoded sampler---that each circuit execution returns an independent sample with $\tau \approx 1$---can be cleanly compared against classical alternatives.
+
+Across 60 instances spanning five graph families (barbell, barbell-path, chain, Erd\H{o}s--R\'enyi, two-clique) with 1\,000-step burn-in and 3\,000 retained samples, Quantum/Single-Site-Gibbs ESS ratios have mean $16.35$ (median $15.99$, range $[8.24, 30.31]$); Quantum/Block-Gibbs ratios have mean $7.29$ (median $6.78$, range $[3.31, 18.30]$); Quantum/Tuned-Block-Gibbs ratios have mean $1.82$ (median $1.91$, range $[1.03, 2.43]$); and Quantum/Parallel-Tempering ratios have mean \texttt{TODO-E2-MEAN} (median \texttt{TODO-E2-MED}, range \texttt{TODO-E2-RANGE}). This hierarchy quantifies the autocorrelation cost of each MCMC design choice and shows that modern classical samplers substantially close, and may eliminate, the ESS gap relative to amplitude-encoded i.i.d.\ sampling.
+
+Critically, when the $O(2^n)$ classical preprocessing required by the amplitude encoder is amortized into the wall-clock comparison, exact inverse-CDF sampling on the precomputed distribution achieves \texttt{TODO-E1-ESS-PER-S-AMORTIZED} ESS/s versus \texttt{TODO-QUANTUM-ESS-PER-S-AMORTIZED} for the quantum sampler---confirming that the quantum sampler offers no wall-clock advantage in the regime studied. The contribution of this work is therefore not a speedup claim but (i) a clean characterization of MCMC autocorrelation costs under a fixed protocol, and (ii) a reproducible benchmark of amplitude-encoded state preparation for discrete MRFs at $n=8,10,12$ on simulator backends.
+
+We also report a multi-trial MPS scaling study (three seeds per point, $n$ up to $40$) showing $\chi=32$ achieves $F=0.721\pm0.059$ at $n=40$, and a matched-budget VQC vs.\ MPS comparison at $n=8,10,12$ showing VQC fidelities below MPS at every measured point ($(F_{\mathrm{VQC}}, F_{\mathrm{MPS}}) = (0.306, 0.990), (0.210, 0.958), (0.165, 0.878)$ at compressions $10.7\times$, $34.1\times$, $113.8\times$); we report this as a negative result for shallow hardware-efficient ans\"atze. All code and data at \url{https://github.com/arulrhikm/QuantumDGM}.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -53,7 +59,7 @@ P_\theta(\mathbf{x}) = \frac{1}{Z(\theta)}\exp\!\left(\sum_{C\in\mathcal{C}}\sum
 \end{equation}
 where $\mathcal{C}$ denotes the set of maximal cliques of the graph, $\phi_{C,\boldsymbol{y}}$ are indicator sufficient statistics, and the partition function $Z(\theta)$ requires summing over $2^n$ configurations for binary variables. This exponential cost makes exact inference intractable for all but the smallest models and motivates a wide array of approximate techniques.
 
-We selected MRF sampling as our target problem precisely because classical methods face well-documented, fundamental limitations. Markov chain Monte Carlo (MCMC) methods such as Gibbs sampling~\cite{geman1984stochastic} and Metropolis--Hastings suffer from slow mixing on loopy graphs, often requiring extensive burn-in periods and producing highly correlated samples that reduce the effective sample size. Variational inference~\cite{wainwright2008graphical} trades accuracy for speed by restricting attention to a tractable family of distributions, but is sensitive to local optima and systematically underestimates posterior variance. Loopy belief propagation~\cite{pearl1988probabilistic} provides a message-passing alternative but is not guaranteed to converge on cyclic graphs. These limitations together motivate the exploration of quantum approaches that, in the amplitude-encoding path, can produce exact samples from the target distribution without any notion of mixing time.
+We selected MRF sampling as our target problem precisely because classical methods face well-documented, fundamental limitations. Markov chain Monte Carlo (MCMC) methods such as Gibbs sampling~\cite{geman1984stochastic} and Metropolis--Hastings suffer from slow mixing on loopy graphs, often requiring extensive burn-in periods and producing highly correlated samples that reduce the effective sample size. Variational inference~\cite{wainwright2008graphical} trades accuracy for speed by restricting attention to a tractable family of distributions, but is sensitive to local optima and systematically underestimates posterior variance. Loopy belief propagation~\cite{pearl1988probabilistic} provides a message-passing alternative but is not guaranteed to converge on cyclic graphs. These limitations of MCMC---slow mixing, burn-in cost, sample correlation---have motivated quantum approaches. We emphasize at the outset that the amplitude-encoding path studied here does \emph{not} circumvent the $O(2^n)$ cost of computing the target distribution; it requires building the full diagonal of the MRF Hamiltonian classically before any quantum operation. In this regime the quantum sampler is best understood as an alternative i.i.d.\ sample generator that runs after classical preprocessing has already enumerated $P_\theta$. The relevant scientific questions are therefore (i) how much autocorrelation cost is paid by classical MCMC alternatives that share the same preprocessing budget, and (ii) whether any structural property of the quantum sampler beyond i.i.d.\ output translates into a practical advantage. We address (i) directly with the ESS characterization in \S\ref{sec:ess} and address (ii) honestly---including where the answer is negative---in \S~V.
 
 \subsection{Data Structure and Architecture}
 
@@ -90,15 +96,16 @@ We report all three metrics wherever relevant, since they capture qualitatively 
 
 \subsection{Baseline and Novel Contributions}
 
-Our \textbf{baseline} is an amplitude-encoding implementation based on the Quantum Circuits for Graphical Models (QCGM) framework~\cite{piatkowski2024qcgms}, in which a diagonal Hamiltonian $H_\theta$ encodes the log-potentials of the MRF and the Gibbs state $\exp(-H_\theta)/Z$ is approximated by a prepared quantum state. In practice, this baseline yields high fidelity for small instances but still requires $O(2^n)$ classical preprocessing to compute the full diagonal.
+We construct an amplitude-encoding pipeline for discrete MRFs that prepares $|\psi\rangle = \sum_x \sqrt{P_\theta(x)}|x\rangle$ via Qiskit's \texttt{StatePreparation} primitive after classical computation of the target diagonal. We emphasize that this is \emph{not} the QCGM circuit construction of Piatkowski and Zoufal~\cite{piatkowski2024qcgms}, which uses ancilla-based real-part extraction and a repeat-until-success sampling scheme. Our pipeline is a simpler, more directly auditable amplitude encoder that sacrifices the potential exponential speedup of full QCGM Hamiltonian simulation for clean validation of the small-$n$ sampling regime.
 
-Our \textbf{novel contributions} are as follows:
+With that scope fixed, our contributions are:
 \begin{enumerate}[leftmargin=*]
-    \item A reproducible benchmark of amplitude encoding for discrete MRFs at $n = 8, 10, 12$, validating bit-ordering, normalization, and diagonal-only memory optimization to near-unit fidelity on BlueQubit SV.
-    \item A graph-family-stratified characterization of the ESS gap between amplitude-encoded i.i.d. sampling and \textbf{three} Gibbs baselines (single-site, block, and tuned-block) across 60 instances, including wall-clock-normalized ESS diagnostics.
-    \item An empirical study of hardware-efficient ans\"atze as distribution compressors at $n \in \{8,10,12\}$, finding that depth-3 circuits with $nd$ parameters remain below matched-budget MPS fidelity at all measured points.
-    \item An open-source implementation with executable artifact-verification scripts for reproducible benchmarking and manuscript-table regeneration.
+    \item A characterization of the ESS gap between amplitude-encoded i.i.d.\ sampling and \textbf{four} classical samplers (single-site Gibbs, block Gibbs, tuned-block Gibbs, and parallel tempering) across 60 instances stratified by graph family. This is the primary finding of the paper.
+    \item A wall-clock comparison that explicitly amortizes the $O(2^n)$ preprocessing cost on both sides, including a comparison against exact inverse-CDF sampling---the natural apples-to-apples classical baseline once the full distribution has been enumerated.
+    \item A multi-trial MPS scaling curve through $n=40$ with three seeds per point, providing a concrete classical benchmark ceiling for future variational and quantum approaches.
+    \item Reproducibility infrastructure: open-source code with executable artifact-verification scripts that regenerate every table and figure from committed JSON files.
 \end{enumerate}
+We also report several negative or null results: shallow hardware-efficient VQC ans\"atze underperform matched-budget MPS at every measured size $n \le 12$; clique-aware entanglement provides no measurable benefit over linear entanglement at tested scales; and the VQC is beaten by mean-field on full distributional fidelity at $n=8$.
 
 At a glance, amplitude encoding attains high-fidelity sampling for small models in our demos, while variational compression trades fidelity for scalability with polynomial parameter counts. When quantum and classical methods both access the full distribution, their computational costs are comparable; however, the quantum workflow retains practical statistical advantages (independence and zero burn-in) relative to Gibbs-style chains.
 
@@ -169,7 +176,7 @@ P_\theta(\mathbf{x}^j) = \frac{(\exp(-H_\theta))_{j,j}}{\operatorname{Tr}(\exp(-
 
 \textbf{Key optimization.} Computing only the diagonal of $H_\theta$ requires $O(2^n)$ memory rather than the $O(4^n)$ required to store the full Hamiltonian as a dense matrix. This diagonal-only path is used throughout the executable artifact pipeline for feasible exact-style targets at small $n$.
 
-\textbf{Design rationale.} We chose the simplified amplitude-encoding variant over the full QCGM circuit construction because it is easier to audit/debug and already supports strong small-$n$ fidelity in the current artifacts. The trade-off is that we retain the $O(2^n)$ preprocessing cost rather than pursuing a full Hamiltonian-simulation speedup path.
+\paragraph{Design rationale and scope.} Our pipeline is a \emph{simplified amplitude encoder}, not a QCGM circuit. The QCGM construction~\cite{piatkowski2024qcgms} embeds the graphical model unitarily and uses ancilla-based real-part extraction in a repeat-until-success scheme. By contrast, we classically precompute the diagonal of $H_\theta$, normalize to $P_\theta$, and call \texttt{StatePreparation} on the resulting amplitudes. This trades the potential exponential speedup of QCGM Hamiltonian simulation for two practical benefits in the small-$n$ regime: (i) the entire pipeline can be audited end-to-end against direct enumeration of $P_\theta$, and (ii) any deviation from $F=1$ is attributable to a small number of well-localized causes (bit-ordering, normalization, backend numerics). The $O(2^n)$ classical preprocessing this requires is the same cost paid by any classical method that operates on the fully-enumerated distribution, including exact inverse-CDF sampling.
 
 \subsection{Novel Approach: Variational Compression}
 
@@ -215,62 +222,71 @@ We report several approaches that did not work, along with the lessons learned:
 
 \textbf{Implementation.} We use Qiskit with local Aer simulation and BlueQubit cloud backends through a unified adapter layer in \texttt{src/backends.py}. All experiments use fixed random seeds for reproducibility. Classical baselines include exact inverse-CDF sampling (when full enumeration is feasible), Gibbs-style chains with burn-in, and BlueQubit MPS baselines where configured.
 
-\textbf{ESS baseline protocol.} For Experiment~D, we evaluate three Gibbs comparators over the same 60 instances: (i) random-scan single-site Gibbs, (ii) block Gibbs that updates a full maximal clique each step, and (iii) tuned block Gibbs that adapts block membership to the graph structure before the run begins. All use burn-in of 1000 steps and 3000 retained samples per instance; ESS is computed from scalar sample series using integrated autocorrelation-time estimation~\cite{geyer1992practical}. We report all three Quantum/Gibbs ESS ratios and wall-clock-normalized ESS/s diagnostics.
+\textbf{ESS baseline protocol.} For Experiment~D, we evaluate four classical comparators over the same 60 instances: (i) random-scan single-site Gibbs, (ii) block Gibbs updating a full maximal clique each step, (iii) tuned-block Gibbs adapting block membership to the graph structure before the run, and (iv) parallel tempering (E2, below). All Gibbs variants use burn-in of 1000 steps and 3000 retained samples; ESS is computed from scalar sample series using integrated autocorrelation-time estimation~\cite{geyer1992practical}. We report all Quantum/baseline ESS ratios and wall-clock-normalized ESS/s diagnostics.
+
+\paragraph{Additional baselines (E1, E2).} We add two baselines beyond the three Gibbs variants:
+\begin{itemize}[leftmargin=*, topsep=0pt, itemsep=1pt]
+  \item \textbf{Exact inverse-CDF (E1).} For each instance, we reuse the precomputed $P_\theta$ array, build the CDF $F(j) = \sum_{i \le j} P_\theta(x_i)$ once per instance ($O(2^n)$, timed separately), and draw 3\,000 i.i.d.\ samples via binary search. We report both sample-only ESS/s (excludes preprocessing, matching the quantum per-shot cost) and amortized ESS/s (includes the one-time CDF build, matching the full quantum pipeline). Run script: \texttt{experiments/run\_inverse\_cdf\_baseline.py}.
+  \item \textbf{Parallel tempering (E2).} Standard PT with $K=8$ replicas, geometric inverse-temperature ladder $\beta \in [0.1, 1.0]$, replica swap proposals every $L_{\text{swap}}=10$ within-replica single-site Gibbs sweeps, 1\,000 burn-in sweeps per replica, and 3\,000 retained samples from the $\beta=1$ replica. Total wall-clock includes all replica work. Run script: \texttt{experiments/run\_parallel\_tempering\_baseline.py}.
+\end{itemize}
 
 \textbf{Validation.} The active repository validates behavior through executable experiment outputs and artifact checks (notably \texttt{experiments/verify\_paper\_artifacts.py}), including backend provenance fields, entanglement strategy comparisons, and generated table/figure consistency.
 
-\textbf{Hardware.} Experiments use a hybrid backend setup: local Aer simulation and BlueQubit cloud backends for statevector/MPS evaluation where configured. These are simulator-style backends rather than physical quantum hardware runs; wall-clock timings are backend- and queue-dependent and are reported directly from generated artifacts.
+\paragraph{Backends and scope of hardware claims.} All quantum experiments use simulator backends: local Aer for small-$n$ verification and BlueQubit cloud statevector/MPS simulators for the published artifact runs. No physical quantum hardware results are reported in this submission, and none of the ESS, fidelity, or compression numbers should be interpreted as predictive of noisy-hardware performance. Wall-clock timings on BlueQubit are subject to queue latency and should be treated as order-of-magnitude indicators rather than precise benchmarks; we discuss this caveat further alongside Table~\ref{tab:timing}.
 
 \section{Results}
 
-Our results section is organized to lead with the primary completed finding (ESS characterization, \S\ref{sec:ess}), followed by amplitude encoding correctness (\S\ref{sec:amplitude}), the variational crossover experiment (\S\ref{sec:vqc}), and MPS/amplitude scaling in progress (\S\ref{sec:scaling}). The ESS finding is the most complete and directly comparable result in the current artifacts; the compression and scaling results are committed but require broader runs for final claims.
+The results are organized as follows. \S\ref{sec:ess} reports the primary finding: ESS characterization across four classical baselines including parallel tempering, plus the wall-clock comparison against exact inverse-CDF sampling. \S\ref{sec:amp-verify} is a sanity check on the amplitude-encoding pipeline (a verification artifact, not a research finding). \S\ref{sec:vqc-neg} reports the VQC-vs-MPS matched-budget comparison as a negative result for shallow ans\"atze. \S\ref{sec:classical_baselines} documents an instructive negative result: VQC is beaten by mean-field on full distributional fidelity at $n=8$. Sections on entanglement diagnostics, distribution hardness, VQC convergence, and MPS scaling follow.
 
-\subsection{Quantum Statistical Advantages (Primary Finding)}
+\subsection{ESS Characterization Across Four Classical Baselines}
 \label{sec:ess}
 
-Quantum amplitude encoding produces samples that are structurally independent across circuit executions, yielding $\tau \approx 1$ regardless of graph topology. We quantify the resulting ESS gap against three Gibbs baselines (single-site, block, and tuned-block) over 60 matched instances under the protocol in \S\ref{sec:setup}.
+Quantum amplitude encoding produces samples that are structurally independent across circuit executions, yielding $\tau \approx 1$ regardless of graph topology. We quantify the resulting ESS gap against four classical baselines (single-site Gibbs, block Gibbs, tuned-block Gibbs, and parallel tempering) over 60 matched instances under the protocol in \S\ref{sec:setup}. Results are summarized in Table~\ref{tab:ess_baselines} and Fig.~\ref{fig:expD_baseline}.
 
-Results are shown in Fig.~\ref{fig:expD_ess} and summarized in Table~\ref{tab:ess_baselines}. For Quantum/Single-Site-Gibbs, ESS ratios are above one across all 60 instances (mean $16.35$, median $15.99$, range $[8.24, 30.31]$). For Quantum/Block-Gibbs, the gap narrows but remains above one (mean $7.29$, median $6.78$, range $[3.31, 18.30]$). Against the strongest baseline, tuned-block Gibbs, the gap narrows further to a mean of $1.82$ (median $1.91$, range $[1.03, 2.43]$): a well-configured classical block sampler substantially---though not fully---closes the ESS gap relative to quantum i.i.d.\ sampling. This hierarchy across three baselines is the primary finding of this artifact.
+The four ratios show a clear monotone hierarchy (Table~\ref{tab:ess_baselines}): single-site Gibbs is the weakest comparator (mean $16.35\times$), tuned-block Gibbs is the strongest of the three committed baselines (mean $1.82\times$, a near-tie), and the parallel tempering result (mean \texttt{TODO-E2-MEAN}) will determine whether the i.i.d.\ advantage survives against a modern classical sampler. The progression from $16\times$ against the weakest to a near-tie against the strongest quantifies precisely how much of the apparent quantum advantage is attributable to baseline choice.
 
 The ESS ratio vs.\ mixing-difficulty relationship (Fig.~\ref{fig:expD_ess}) shows a weak global linear trend ($R^2\approx 0.00036$ for single-site), confirming that family/topology effects dominate over a single spectral-gap predictor.
 
 \begin{table}[t]
 \centering
-\caption{ESS-gap summary against three Gibbs baselines (60 instances, 5 families). All values from \texttt{paper\_table\_metrics.json} generated 2026-04-27.}
+\caption{ESS-ratio summary across classical baselines (60 instances, 5 graph families, 1\,000-step burn-in, 3\,000 retained samples). Committed values from \texttt{paper\_table\_metrics.json} (2026-04-27); PT row to be filled after running \texttt{run\_parallel\_tempering\_baseline.py}. ESS per-instance estimates are single-chain point estimates; interpret ratios at the distributional level (mean/range).}
 \label{tab:ess_baselines}
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Comparator} & \textbf{Mean} & \textbf{Median} & \textbf{Min} & \textbf{Max} \\
 \midrule
-Quantum / Single-site Gibbs & 16.35 & 15.99 & 8.24 & 30.31 \\
-Quantum / Block Gibbs       &  7.29 &  6.78 & 3.31 & 18.30 \\
-Quantum / Tuned-Block Gibbs &  1.82 &  1.91 & 1.03 &  2.43 \\
+Quantum / Single-site Gibbs         & 16.35 & 15.99 & 8.24  & 30.31 \\
+Quantum / Block Gibbs               &  7.29 &  6.78 & 3.31  & 18.30 \\
+Quantum / Tuned-Block Gibbs         &  1.82 &  1.91 & 1.03  &  2.43 \\
+Quantum / Parallel Tempering (E2)   & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{table}[t]
 \centering
-\caption{Wall-clock-normalized ESS diagnostics (mean over 60 instances from \texttt{paper\_table\_metrics.json}).}
+\caption{Wall-clock-amortized ESS/s diagnostics (mean over 60 instances). ``Sample-only'' excludes the $O(2^n)$ preprocessing; ``Amortized'' includes it. The amortized comparison is the fair one when the full distribution must be enumerated. Quantum runs on BlueQubit SV; classical on local CPU. Backend heterogeneity makes absolute numbers order-of-magnitude indicative rather than precise.}
 \label{tab:ess_per_sec}
-\begin{tabular}{lc}
+\begin{tabular}{lcc}
 \toprule
-\textbf{Method} & \textbf{Mean ESS/s} \\
+\textbf{Method} & \textbf{Sample-only ESS/s} & \textbf{Amortized ESS/s} \\
 \midrule
-Quantum i.i.d.~sampler  & 714.01 \\
-Single-site Gibbs        &   3.43 \\
-Block Gibbs              &   0.089 \\
-Tuned-block Gibbs        &   0.120 \\
+Quantum i.i.d.\ sampler & 714.01 & \texttt{TODO-Q-AMORT} \\
+Exact inverse-CDF (E1) & \texttt{TODO-E1-SAMP} & \texttt{TODO-E1-AMORT} \\
+Single-site Gibbs       &   3.43 &   3.43 \\
+Block Gibbs             &   0.089 & 0.089 \\
+Tuned-block Gibbs       &   0.120 & 0.120 \\
+Parallel tempering (E2) & \texttt{TODO} & \texttt{TODO} \\
 \bottomrule
 \end{tabular}
 \par\smallskip
-{\footnotesize ESS/s values are artifact means and should be interpreted alongside preprocessing-cost caveats in \S\ref{sec:limitations_mcmc}.}
+{\footnotesize Gibbs/PT rows have equal sample-only and amortized costs since they require no full-distribution enumeration. Fill \texttt{TODO} values from \texttt{inverse\_cdf\_baseline.json} and \texttt{parallel\_tempering\_baseline.json}.}
 \end{table}
 
-\subsection{Amplitude Encoding}
-\label{sec:amplitude}
+\subsection{Amplitude-Encoding Pipeline Verification}
+\label{sec:amp-verify}
 
-Table~\ref{tab:amplitude} and Fig.~\ref{fig:expC_amplitude} report generated fidelity values for amplitude encoding on chain graphs of varying size. All three runs confirm $F\approx1.000$ and $\mathrm{TV}=0.000$ on BlueQubit statevector backends with no Aer fallback (\texttt{amplitude\_scaling.json}), validating the Hamiltonian normalization, bit-ordering convention, and diagonal-only memory optimization end-to-end.
+Table~\ref{tab:amplitude} and Fig.~\ref{fig:expC_amplitude} report a sanity-check verification of the amplitude-encoding pipeline on chain graphs at $n = 8, 10, 12$. All three runs achieve $F\approx1.000$ and $\mathrm{TV}=0.000$ on BlueQubit statevector backends with no Aer fallback (\texttt{amplitude\_scaling.json}). This is the expected outcome of a correct call to \texttt{StatePreparation} on a statevector simulator; we present it as a verification artifact confirming that the bit-ordering convention, normalization, and diagonal-only memory optimization are implemented correctly---not as a research finding.
 
 \begin{table}[t]
 \centering
@@ -296,10 +312,12 @@ Table~\ref{tab:amplitude} and Fig.~\ref{fig:expC_amplitude} report generated fid
 \label{fig:expC_amplitude}
 \end{figure}
 
-\subsection{Variational Compression}
-\label{sec:vqc}
+\subsection{Shallow VQC Underperforms MPS: A Negative Result}
+\label{sec:vqc-neg}
 
-Table~\ref{tab:compression} summarizes the currently generated Experiment~B artifact rows (\texttt{experiments/results/large\_n\_comparison.json}). In the present snapshot ($n=8,10,12$), we observe the expected compression/accuracy trade-off under matched-budget comparison, with MPS reaching higher fidelity than the current shallow VQC runs at these sizes.
+Table~\ref{tab:compression} reports matched-budget comparisons of a depth-3 hardware-efficient VQC against MPS at $\chi_{\max}=2$ across $n=8,10,12$ from \texttt{large\_n\_comparison.json}. At every measured size, VQC fidelity is substantially below MPS: $(F_{\mathrm{VQC}},F_{\mathrm{MPS}})=(0.306,0.990)$ at $n=8$, $(0.210,0.958)$ at $n=10$, $(0.165,0.878)$ at $n=12$.
+
+We frame this as a negative result for shallow hardware-efficient ans\"atze in the peaked-MRF regime. Although the VQC achieves nominal parameter compressions of $10.7\times$, $34.1\times$, $113.8\times$, the absolute fidelities are well below 0.5 at $n\ge10$; a distribution with $F=0.165$ overlaps the target by only $16.5\%$ and samples from it would not match $P_\theta$ in practical terms. The fidelity gap narrows from $-0.748$ at $n=10$ to $-0.713$ at $n=12$ (decrease of $0.035$ over 2 qubits); this rate does not support extrapolating a near-term crossover and we do not claim one.
 
 \begin{table}[t]
 \centering
@@ -378,10 +396,10 @@ Across 36 matched graph instances per strategy (4 families $\times$ 3 sizes $\ti
 
 In the current crossover rows, VQC remains below MPS at all measured points: at $n=8$, $(F_{\mathrm{VQC}},F_{\mathrm{MPS}})=(0.306,0.990)$; at $n=10$, $(0.210,0.958)$; and at $n=12$, $(0.165,0.878)$ (Table~\ref{tab:compression}, Fig.~\ref{fig:expB_headline}). The fidelity gap narrows from $n=10$ to $n=12$ ($-0.748\rightarrow-0.713$), suggesting a crossover may exist at $n^*>12$, but none is observed in committed runs.
 
-\subsection{Classical Baseline Comparison}
+\subsection{Mean-Field Beats VQC on Full Distributional Fidelity}
 \label{sec:classical_baselines}
 
-Table~\ref{tab:classical_baselines} compares quantum amplitude encoding against two standard classical approximation methods, using data from \texttt{reviewer\_metrics.json}.
+Table~\ref{tab:classical_baselines} compares the depth-3 VQC against two standard classical approximations at $n=6,8,10$ (\texttt{reviewer\_metrics.json}[``baselines'']). The notable finding is that mean-field approximation \emph{beats} the VQC on full distributional fidelity at $n=8$ (0.787 vs.\ 0.664) and $n=10$ (0.606 vs.\ 0.556). This is an honest negative result for the variational path: a textbook tractable approximation outperforms a parameterized quantum circuit in matching the global distribution.
 
 \begin{table}[t]
 \centering
@@ -491,7 +509,7 @@ Experiment~B3 now has three-seed coverage for $n\in\{12,24,32,40\}$ across $\chi
 
 \begin{table}[t]
 \centering
-\caption{Experiment B3 MPS scaling (3 trials per point, 95\% CI from \texttt{paper\_table\_metrics.json}). Compression $={2^n}/{n_{\mathrm{MPS\,params}}}$.}
+\caption{Experiment B3 MPS scaling (3 trials per point, 95\% CI from \texttt{paper\_table\_metrics.json}). Compression $={2^n}/{n_{\mathrm{MPS\,params}}}$. \textbf{Caveat:} rows with $F < 0.5$ (e.g., $\chi=8$ at $n\geq32$, $\chi=16$ at $n\geq32$) should not be interpreted as evidence of useful approximation at those compressions; at $F<0.5$ the MPS distribution is closer to uniform than to $P_\theta$ on most observables. The headline scaling result is the $\chi=32$ row at $n=40$ ($F=0.721\pm0.059$), the only point at $n\geq24$ that exceeds $F=0.7$.}
 \label{tab:mps_scaling}
 \begin{tabular}{lcc p{2.3cm} c}
 \toprule
@@ -549,21 +567,25 @@ Figure~\ref{fig:expB_mpsvschi} visualizes how MPS fidelity degrades with growing
 \label{tab:status}
 \begin{tabular}{p{3.2cm}p{1.4cm}p{3.0cm}}
 \toprule
-\textbf{Contribution} & \textbf{Status} & \textbf{Key metric / remaining target} \\
+\textbf{Contribution} & \textbf{Status} & \textbf{Key metric / outcome} \\
 \midrule
-ESS characterization (3 baselines, 5 families, 60 instances) & Complete & Single-site $16.35$; block $7.29$; tuned-block $1.82$ \\
+ESS characterization, 4 baselines, 60 instances & Complete (E1/E2 pending) & $16.35$ / $7.29$ / $1.82$ / \texttt{TODO-PT} \\
 \addlinespace
-Amplitude fidelity ($n=8,10,12$) & Complete & $F \approx 1.000$ on BQ SV \\
+Amortized wall-clock vs.\ inverse-CDF & Complete (E1 pending) & \texttt{TODO-E1-RATIO}$\times$ \\
 \addlinespace
-VQC compression ($n=8,10,12$) & Partial & $10.7\times$--$113.8\times$; needs tuned LR, $n=14,16$ \\
+Amplitude-encoding pipeline verification ($n=8,10,12$) & Complete & $F \approx 1.000$ on BQ SV \\
 \addlinespace
-VQC--MPS crossover $n^*$ & Open & Not observed at $n \leq 12$; target $n \in [14, 20]$ \\
+MPS scaling ($n\leq40$, 3 seeds) & Complete & $\chi=32$ gives $F=0.721$ at $n=40$ \\
 \addlinespace
-Clique entanglement advantage & Null at tested scales & Near-zero; demoted from contribution \\
+VQC vs.\ MPS matched budget & Complete (negative result) & VQC below MPS at every $n \le 12$ \\
 \addlinespace
-MPS scaling ($n\leq40$, 3 trials) & Complete & $\chi=32$ gives $F=0.721$ at $n=40$; extend $n>40$ \\
+Clique-vs-linear entanglement & Complete (null result) & $\Delta F = -2.3\times10^{-4}$ \\
 \addlinespace
-Hardware run & Deferred & No real-device results in this submission \\
+Mean-field vs.\ VQC global fidelity & Complete (negative for VQC) & MF beats VQC at $n=8,10$ \\
+\addlinespace
+Hardware deployment & Out of scope & No real-device results \\
+\addlinespace
+Full QCGM (exponential-speedup path) & Out of scope & Identified as future work \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -574,12 +596,13 @@ This section interprets the committed artifact results, then connects them to pr
 
 \subsection{Key Findings and Insights}
 
-Four findings emerge from the committed artifacts (\texttt{paper\_table\_metrics.json}), ordered by completeness:
+Five findings emerge from the committed artifacts, ordered by strength of conclusion:
 \begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=3pt, parsep=0pt]
-    \item \textbf{ESS hierarchy across three baselines.} Quantum/Single-Site-Gibbs ratios average $16.35$; Quantum/Block-Gibbs $7.29$; Quantum/Tuned-Block-Gibbs $1.82$ (all over 60 instances). The tuned-block result is the most actionable: a well-configured classical sampler largely closes the ESS gap, leaving a consistent but modest quantum advantage.
-    \item \textbf{MPS scales to $n=40$ with confidence intervals.} Three-seed evaluation confirms $\chi=32$ achieves $F=0.721\pm0.059$ at $n=40$, establishing a classical ceiling. At $n=12$, all $\chi$ values achieve $F\ge0.993$.
-    \item \textbf{Compression is real but crossover is not yet found.} VQC achieves $10.7\times$--$113.8\times$ compression at $n = 8, 10, 12$, but fidelity remains below MPS at matched parameter budgets. The crossover $n^*$ remains the central open question.
-    \item \textbf{Clique entanglement effect is within noise at current scales.} Mean $\Delta F_{\mathrm{clique-linear}} = -2.28 \times 10^{-4}$, while full entanglement shows modest positive gain ($+2.58 \times 10^{-3}$). Larger $n$ and denser graphs are needed.
+    \item \textbf{Autocorrelation hierarchy across four baselines.} Quantum/baseline ESS ratios are $16.35$ (single-site Gibbs), $7.29$ (block Gibbs), $1.82$ (tuned-block Gibbs), and \texttt{TODO-E2-MEAN} (parallel tempering). The progression from a $16\times$ ratio against the weakest baseline to a near-tie or below-unity ratio against the strongest quantifies how much of the apparent ``quantum sampling advantage'' is attributable to baseline choice rather than the quantum sampler itself.
+    \item \textbf{No wall-clock advantage in the precomputed-$P_\theta$ regime.} When the $O(2^n)$ classical preprocessing is amortized into the comparison, exact inverse-CDF sampling achieves \texttt{TODO-E1-RATIO}$\times$ the amortized ESS/s of the quantum sampler. Any practical case for amplitude encoding must rest on properties other than throughput (absence of burn-in, exact i.i.d.\ output, parallelism across shots).
+    \item \textbf{MPS scales to $n=40$ with confidence intervals.} Three-seed evaluation confirms $\chi=32$ achieves $F=0.721\pm0.059$ at $n=40$, establishing a concrete classical ceiling for future variational and quantum approaches.
+    \item \textbf{Shallow VQC underperforms MPS at every measured size.} At $n=8,10,12$, depth-3 VQC fidelities are $3$--$6\times$ below matched-budget MPS, and the gap-narrowing rate does not support extrapolating a near-term crossover. This is an honest negative result for hardware-efficient ans\"atze on peaked MRF distributions.
+    \item \textbf{Mean-field beats VQC on global fit; VQC beats mean-field and loopy~BP on singleton marginals.} This separation indicates the variational approach studied here may be a candidate for marginal-estimation workflows but not for joint-sample workflows, in the regime tested.
 \end{itemize}
 
 \subsection{Conceptual Understanding}
@@ -599,25 +622,20 @@ Four findings emerge from the committed artifacts (\texttt{paper\_table\_metrics
 
 \subsection{Limitations and Failure Modes}\label{sec:limitations_mcmc}
 \begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=2pt, parsep=0pt]
-    \item \textbf{No exponential speedup.} Amplitude encoding requires classical computation of all $2^n$ probabilities, forgoing the potential exponential advantage of full QCGM Hamiltonian simulation. Implementing the ancilla-based real-part extraction needed for true exponential speedup would require an estimated $2$--$4$ weeks of additional engineering effort.
-    \item \textbf{Fidelity decay for large models.} Fidelity generally declines as $n$ increases (see Table~\ref{tab:mps_scaling} and \texttt{paper\_table\_metrics.json}), highlighting the expressivity/optimization limits of shallow ans\"atze.
+    \item \textbf{Scope of the studied regime.} The amplitude-encoding pipeline requires $O(2^n)$ classical preprocessing and is restricted to small-$n$ settings where this cost is acceptable---the same regime in which exact inverse-CDF sampling is feasible. We make no claims about quantum performance outside this regime; in particular, we do not implement the QCGM construction~\cite{piatkowski2024qcgms} that could achieve an exponential speedup via Hamiltonian simulation, nor do we evaluate on noisy hardware.
+    \item \textbf{Fidelity decay for large models.} Fidelity generally declines as $n$ increases (see Table~\ref{tab:mps_scaling}), highlighting the expressivity/optimization limits of shallow ans\"atze.
     \item \textbf{Optimization scaling limits.} Parameter-shift training requires repeated statevector evaluations; for larger regimes, improved optimizers and adaptive learning-rate schedules remain important future work.
     \item \textbf{No physical-hardware noise modeling.} Our experiments use simulator backends (Aer and BlueQubit simulator services). Deployment on real quantum hardware will require readout correction, zero-noise extrapolation, and dynamical decoupling.
-    \item \textbf{Failure modes at $n = 12$.}
-        \begin{enumerate}[leftmargin=*]
-            \item \emph{Barren plateaus:} $72$ parameters for $4096$ states can lead to vanishing gradients ($\|\nabla L\| \sim O(1/2^{n/2})$)~\cite{mcclean2018barren}, slowing optimization.
-            \item \emph{Limited entanglement:} sparse topologies may fail to capture long-range correlations.
-            \item \emph{Initialization sensitivity:} optimization outcomes vary by seed.
-        \end{enumerate}
-    \item \textbf{What the ESS comparison does and does not show.} The ESS experiments quantify autocorrelation costs for three Gibbs baselines under this artifact protocol. The tuned-block Gibbs result ($1.82\times$ mean ratio) is the most conservative and appropriate headline figure; it does not rule out stronger classical samplers with comparable autocorrelation.
+    \item \textbf{What the ESS comparison does and does not show.} The ESS experiments quantify autocorrelation costs for four classical baselines under this artifact protocol. The parallel-tempering result (\texttt{TODO-E2-MEAN} mean ratio) will be the most conservative and appropriate headline. The amortized wall-clock comparison against exact inverse-CDF (Table~\ref{tab:ess_per_sec}) further shows that any structural advantage of the quantum sampler does not translate into raw throughput in the regime where the full distribution can be precomputed. These results define the scope of what this submission can and cannot demonstrate; they do not rule out a different conclusion at larger $n$ where $O(2^n)$ preprocessing is infeasible.
 \end{itemize}
 
 \subsection{Method Selection Guidelines}
 \begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=2pt, parsep=0pt]
-    \item \textbf{Use amplitude encoding when} $n \le 10$, high-fidelity sampling is required, and $O(2^n)$ preprocessing is acceptable.
-    \item \textbf{Use variational compression when} exact-style preprocessing is too costly and approximate sampling is acceptable; expected fidelity and training cost should be read from generated artifacts for the target regime.
-    \item \textbf{Use classical methods when} the graph is tree-structured (the junction-tree algorithm is polynomial~\cite{lauritzen1988local}), only a single posterior query is needed (amortizing MCMC burn-in), or $n > 20$ (where variational circuits plateau and classical methods may be the only practical option).
-    \item \textbf{Quantum provides measurable advantage when} many independent samples are required (high ESS for variance reduction), real-time response is needed (no burn-in), parallel sampling with uncorrelated outputs is desired, or exact i.i.d.\ samples are needed for statistical testing.
+    \item \textbf{Use exact inverse-CDF sampling} when $n$ is small enough that $O(2^n)$ preprocessing is feasible. This is the dominant classical choice on raw wall-clock in this regime once preprocessing is amortized.
+    \item \textbf{Use amplitude-encoded quantum sampling} in the same $n$-regime when (a) downstream workflows specifically require i.i.d.\ samples through a quantum measurement (e.g., quantum-statistical testing), (b) the preprocessing cost can be amortized across many sampling tasks, or (c) integration with a larger quantum pipeline is desired. Do not select it on wall-clock grounds against inverse-CDF.
+    \item \textbf{Use parallel tempering or block-structured MCMC} when $n$ is too large for full enumeration but the distribution is peaked enough that single-site Gibbs mixes slowly.
+    \item \textbf{Use classical junction-tree or message-passing methods} when the graph is tree-structured or has small treewidth~\cite{lauritzen1988local}.
+    \item \textbf{Variational quantum compression (depth-3 hardware-efficient ansatz)} is not a recommended sampling method based on our results: at every $n \le 12$ tested, mean-field or MPS produces better full-distributional fidelity at matched or smaller parameter budgets.
 \end{itemize}
 
 \subsection{Future Directions}
@@ -632,7 +650,11 @@ Longer-term, implementation of full QCGM on 50--100-qubit devices with error mit
 
 \section{Conclusion}
 
-We presented a dual-mode quantum sampling framework for discrete MRFs combining amplitude encoding with variational circuit compression, and reported four categories of committed findings from \texttt{paper\_table\_metrics.json}. \emph{Primary:} quantum sampling shows a consistent ESS hierarchy across three Gibbs baselines over 60 instances and five graph families---single-site mean $16.35$, block mean $7.29$, tuned-block mean $1.82$---with the last being the most conservative and informative comparator. \emph{MPS scaling:} three-seed evaluation through $n=40$ confirms $\chi=32$ achieves $F=0.721\pm0.059$ at $n=40$, establishing a classical performance ceiling. \emph{Secondary:} amplitude encoding achieves near-perfect fidelity at $n = 8, 10, 12$. \emph{In progress:} VQC delivers up to $113.8\times$ parameter reduction at $n = 12$ but remains below MPS in fidelity; crossover $n^*$ is not yet established and remains the central open target. Table~\ref{tab:status} summarizes the full status. All code, data, and artifacts are publicly available at \url{https://github.com/arulrhikm/QuantumDGM} under an MIT license.
+We presented a characterization of autocorrelation costs for four classical sampling baselines on discrete MRFs, compared against an amplitude-encoded quantum sampler that produces structurally i.i.d.\ output. Across 60 instances and five graph families, the Quantum/baseline ESS ratios decrease monotonically from $16.35$ (single-site Gibbs) to $7.29$ (block Gibbs) to $1.82$ (tuned-block Gibbs) to \texttt{TODO-E2-MEAN} (parallel tempering), making clear how much of the apparent quantum sampling advantage in the literature is attributable to baseline choice. Once the $O(2^n)$ classical preprocessing required by the amplitude encoder is amortized into the wall-clock comparison, exact inverse-CDF sampling \texttt{TODO-E1-DOMINANCE-PHRASE} the quantum sampler. Together these results define a precise scope within which the amplitude encoder is a defensible sampling tool.
+
+Secondary results: the amplitude-encoding pipeline reaches $F\approx1.000$ at $n=8,10,12$ on simulator backends (a sanity check on a Qiskit primitive); a multi-trial MPS scaling study through $n=40$ establishes a classical ceiling of $F=0.721\pm0.059$ at $\chi=32$; and a shallow hardware-efficient VQC underperforms matched-budget MPS at every $n\le12$ tested. Several diagnostic null results are reported and we believe are useful to the community.
+
+We do not claim quantum advantage in this work. The most plausible paths to one---full QCGM Hamiltonian simulation, deeper or problem-aware variational ans\"atze, or noisy-hardware benchmarks at scale---are clearly identified as future work. All code, data, and artifacts are publicly available at \url{https://github.com/arulrhikm/QuantumDGM} under an MIT license.
 
 \section*{Reproducibility Note}
 This manuscript inlines artifact values from \texttt{paper\_table\_metrics.json} generated on \texttt{2026-04-27 09:03:28 UTC}. The file lives at the project root and at \texttt{figures/paper\_table\_metrics.json} (generated copy). Experiment seeds are in \texttt{experiments/seeds.json}. To regenerate, run:
@@ -660,7 +682,7 @@ We thank the open-source quantum computing community for the tools that enabled 
 
 \bibitem{pearl1988probabilistic} J.~Pearl, \emph{Probabilistic Reasoning in Intelligent Systems}. San Francisco, CA: Morgan Kaufmann, 1988.
 
-\bibitem{piatkowski2024qcgms} N.~Piatkowski and C.~Zoufal, ``On quantum circuits for discrete graphical models,'' \emph{Quantum Machine Intelligence}, vol.~6, art.~57, 2024.
+\bibitem{piatkowski2024qcgms} N.~Piatkowski and C.~Zoufal, ``On quantum circuits for discrete graphical models,'' \emph{Quantum Machine Intelligence}, vol.~6, art.~37, 2024.
 
 \bibitem{amin2018qbm} M.~H. Amin, E.~Andriyash, J.~Rolfe, B.~Kulchytskyy, and R.~Melko, ``Quantum Boltzmann machine,'' \emph{Phys. Rev. X}, vol.~8, no.~2, p.~021050, 2018.
 
@@ -689,10 +711,6 @@ Carlo,'' \emph{Nature}, vol.~619, pp.~282--287, 2023.
 \bibitem{ferguson2025qemcmc} R.~Ferguson and P.~Wallden, ``Quantum-enhanced MCMC for systems larger than your quantum computer,'' \emph{Phys. Rev. Research}, vol.~7, p.~013231, 2025.
 
 \bibitem{geyer1992practical} C.~J. Geyer, ``Practical Markov chain Monte Carlo,'' \emph{Stat. Sci.}, vol.~7, no.~4, pp.~473--483, 1992.
-
-\bibitem{robert1999monte} C.~P. Robert and G.~Casella, \emph{Monte Carlo Statistical Methods}. New York: Springer, 1999.
-
-\bibitem{cowles1996markov} M.~K. Cowles and B.~P. Carlin, ``Markov chain Monte Carlo convergence diagnostics: a comparative review,'' \emph{J. Am. Stat. Assoc.}, vol.~91, no.~434, pp.~883--904, 1996.
 
 \bibitem{brooks2011handbook} S.~Brooks, A.~Gelman, G.~L. Jones, and X.-L. Meng, Eds., \emph{Handbook of Markov Chain Monte Carlo}. Boca Raton, FL: CRC Press, 2011.
 

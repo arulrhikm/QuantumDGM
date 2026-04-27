@@ -1,297 +1,218 @@
 """
 experiments/run_inverse_cdf_baseline.py
 =======================================
-E1 — Exact Inverse-CDF Baseline (Experiment E1 from revised_plan_v4.tex)
+E1 — Exact Inverse-CDF Baseline  (Experiment E1 from revised_plan_v4.tex)
 
-Motivation
-----------
-The amplitude-encoding pipeline already computes the full diagonal of H_theta
-in O(2^n) time.  Once that array is in memory, the apples-to-apples classical
-baseline is exact inverse-CDF sampling — both methods amortize the SAME
-preprocessing cost and both produce i.i.d. samples with tau ≈ 1.
+This script uses the IDENTICAL instance-generation pipeline as run_ess_sweep.py:
+  - graph_families.family_registry() + sample_mrf_params()
+  - src.amplitude_encoding.pairwise_probs_from_params()
+  - src.metrics.ess_ratio_from_series()   (returns ESS/N ratio in (0,1])
 
-Protocol (from revised_plan_v4.tex §2.1)
------------------------------------------
-For each of the 60 ESS instances (5 families × 12 instances):
-  1. Rebuild P_theta from the same seed/graph used in the ESS sweep.
-  2. Build the cumulative array F(j) = sum_{i<=j} P_theta(x_i).  [O(2^n), timed]
-  3. Draw 3000 i.i.d. samples via binary search on F.  [O(n) per sample, timed]
-  4. Compute ESS from the scalar sample series using the same IAT estimator
-     used everywhere else in the codebase.
-  5. Record t_preprocess_s, t_sample_s, t_total_s, ess,
-     ess_per_s_sample_only, ess_per_s_amortized.
+The scalar observable is Hamming weight (bin(x).count("1")), exactly matching
+the ESS sweep, so ESS ratios are directly comparable.
+
+For the quantum sampler row, we additionally record t_preprocess_s (the time
+to enumerate P_theta with pairwise_probs_from_params) and report an amortized
+ESS/s that includes this cost — which is the fair apples-to-apples comparison
+since the inverse-CDF builder incurs the same O(2^n) preprocessing.
 
 Output
 ------
-  experiments/results/inverse_cdf_baseline.json  (schema per plan)
+  experiments/results/inverse_cdf_baseline.json
 
 Usage
 -----
-  python experiments/run_inverse_cdf_baseline.py
-  python experiments/run_inverse_cdf_baseline.py --n_max 12  # smaller test
+  python -m experiments.run_inverse_cdf_baseline
+  python -m experiments.run_inverse_cdf_baseline --n-values 8,10 --seeds 1
 """
 
-import json
-import time
-import bisect
+from __future__ import annotations
+
 import argparse
 import datetime
-import math
+import json
 import os
+import time
+
 import numpy as np
 
-# ── MRF / graph helpers (reuse existing codebase utilities) ──────────────────
-# We try to import from src/.  If not available, we inline the minimal logic.
-try:
-    from src.mrf import build_mrf, sample_exact   # type: ignore
-    _HAS_SRC = True
-except ImportError:
-    _HAS_SRC = False
-
-# ── ESS estimator (autocorrelation time, same as rest of codebase) ──────────
-def compute_ess_from_series(series: list) -> float:
-    """
-    Estimate ESS via integrated autocorrelation time.
-    For i.i.d. samples, IAT = 1 and ESS = len(series).
-    """
-    n = len(series)
-    if n < 4:
-        return float(n)
-    arr = np.array(series, dtype=float)
-    arr -= arr.mean()
-    var = np.var(arr)
-    if var < 1e-12:
-        return float(n)
-    # sum of normalized auto-covariances, truncated at first negative lag
-    gamma0 = np.dot(arr, arr) / n
-    iat = 1.0
-    for lag in range(1, n // 2):
-        gamma = np.dot(arr[:-lag], arr[lag:]) / n
-        rho = gamma / gamma0
-        if rho <= 0.0:
-            break
-        iat += 2.0 * rho
-    return float(n) / max(iat, 1.0)
-
-# ── Minimal MRF builder (inline fallback if src/ not importable) ─────────────
-def _make_mrf_graph(family: str, n: int, seed: int):
-    """
-    Reconstruct the same MRF instance used in the ESS sweep.
-    Returns (edges, theta) where theta is a dict (edge) -> (2,2) array.
-    Mirrors the MRF construction in the existing experiment runners.
-    """
-    rng = np.random.default_rng(seed)
-    nodes = list(range(n))
-
-    if family == "chain":
-        edges = [(i, i + 1) for i in range(n - 1)]
-
-    elif family == "barbell":
-        # two cliques of size n//2 connected by a bridge
-        half = n // 2
-        edges = []
-        for i in range(half):
-            for j in range(i + 1, half):
-                edges.append((i, j))
-        for i in range(half, n):
-            for j in range(i + 1, n):
-                edges.append((i, j))
-        edges.append((half - 1, half))   # bridge
-
-    elif family == "barbell_path":
-        half = n // 2
-        edges = []
-        for i in range(half):
-            for j in range(i + 1, half):
-                edges.append((i, j))
-        for i in range(half, n):
-            for j in range(i + 1, n):
-                edges.append((i, j))
-        # path connector
-        for k in range(half - 1, half):
-            edges.append((k, k + 1))
-
-    elif family == "erdos_renyi":
-        p = 0.5
-        edges = []
-        for i in range(n):
-            for j in range(i + 1, n):
-                if rng.random() < p:
-                    edges.append((i, j))
-        if not edges:
-            edges = [(0, 1)]
-
-    elif family == "two_clique":
-        half = n // 2
-        edges = []
-        for i in range(half):
-            for j in range(i + 1, half):
-                edges.append((i, j))
-        for i in range(half, n):
-            for j in range(i + 1, n):
-                edges.append((i, j))
-        edges.append((0, half))          # single bridge
-
-    else:
-        raise ValueError(f"Unknown family: {family}")
-
-    # Edge potentials: theta_{ij}(x_i, x_j) ~ U(-5, 0) per plan
-    rng2 = np.random.default_rng(seed + 1000)
-    theta = {}
-    for e in edges:
-        theta[e] = rng2.uniform(-5.0, 0.0, size=(2, 2))
-
-    # Also singleton potentials (theta_i(x_i) ~ U(-5,0))
-    singleton = {}
-    for i in nodes:
-        singleton[i] = rng2.uniform(-5.0, 0.0, size=(2,))
-
-    return n, edges, theta, singleton
+from experiments.graph_families import family_registry, sample_mrf_params
+from src.amplitude_encoding import pairwise_probs_from_params
+from src.metrics import ess_ratio_from_series
 
 
-def _compute_log_prob_table(n: int, edges, edge_theta, singleton_theta) -> np.ndarray:
-    """
-    Enumerate all 2^n configurations and compute unnormalized log-probabilities.
-    Returns normalized probability array P of shape (2^n,).
-    """
-    N = 2**n
-    log_p = np.zeros(N)
-    for state_int in range(N):
-        bits = [(state_int >> i) & 1 for i in range(n)]
-        lp = 0.0
-        for i, s in enumerate(bits):
-            lp += singleton_theta[i][s]
-        for (i, j), th in zip(edges, [edge_theta[e] for e in edges]):
-            lp += th[bits[i], bits[j]]
-        log_p[state_int] = lp
-    # normalize
-    log_p -= np.max(log_p)
-    p = np.exp(log_p)
-    p /= p.sum()
-    return p
-
-
-def exact_icdf_sample(cdf: np.ndarray, n_samples: int) -> list:
-    """Draw n_samples from the distribution defined by CDF via binary search."""
-    u = np.random.default_rng().random(n_samples)
-    samples = []
-    for ui in u:
-        idx = bisect.bisect_right(cdf, ui)
-        idx = min(idx, len(cdf) - 1)
-        samples.append(idx)
-    return samples
-
-
-# ── Instance specification: 5 families × 12 instances ───────────────────────
-# Seeds and sizes matching the ESS sweep in experiments/results/ess_sweep.json
-FAMILIES = ["barbell", "barbell_path", "chain", "erdos_renyi", "two_clique"]
-N_INSTANCES_PER_FAMILY = 12
-N_PER_FAMILY = 10           # qubit count for each instance
 N_SAMPLES = 3000
+BURN_IN   = 0          # inverse-CDF draws i.i.d. samples; no burn-in needed
+FAMILIES_DEFAULT = "chain,erdos_renyi,two_clique,barbell,barbell_path"
 
 
-def make_instance_list(n_max: int = 99):
-    instances = []
-    for family in FAMILIES:
-        for inst_idx in range(N_INSTANCES_PER_FAMILY):
-            seed = 42 + inst_idx * 7 + FAMILIES.index(family) * 100
-            n = N_PER_FAMILY
-            if n > n_max:
-                continue
-            instances.append({
-                "instance_id": f"{family}_n{n}_seed{seed}",
-                "family": family,
-                "n": n,
-                "seed": seed,
-                "inst_idx": inst_idx,
-            })
-    return instances
+def _icdf_samples(probs: np.ndarray, n_samples: int, rng: np.random.Generator):
+    """
+    Draw n_samples i.i.d. integer indices from `probs` using NumPy vectorised
+    search on the pre-built CDF.  Returns (samples: np.ndarray[int], t_cdf_build_s, t_sample_s).
+    """
+    # --- build CDF (timed separately = O(2^n) preprocessing) ---
+    t_pre0 = time.perf_counter()
+    cdf = np.cumsum(probs)
+    cdf[-1] = 1.0          # guarantee exact 1.0 at tail
+    t_cdf_build_s = time.perf_counter() - t_pre0
+
+    # --- draw samples via searchsorted (each sample O(log 2^n) = O(n)) ---
+    t_samp0 = time.perf_counter()
+    u = rng.random(n_samples)
+    samples = np.searchsorted(cdf, u, side="right")
+    samples = np.clip(samples, 0, len(probs) - 1).astype(int)
+    t_sample_s = time.perf_counter() - t_samp0
+
+    return samples, t_cdf_build_s, t_sample_s
 
 
-def run_e1(n_max: int = 99):
-    instances = make_instance_list(n_max)
-    results = []
+def _scalar_series(idx: np.ndarray) -> np.ndarray:
+    """
+    Convert integer configuration indices to Hamming-weight scalars.
+    Matches the observable used in run_ess_sweep.py.
+    """
+    return np.array([bin(int(x)).count("1") for x in idx], dtype=float)
 
-    print(f"Running E1 (Exact Inverse-CDF Baseline) on {len(instances)} instances ...")
 
-    for inst in instances:
-        iid = inst["instance_id"]
-        family = inst["family"]
-        n = inst["n"]
-        seed = inst["seed"]
-        print(f"  {iid} ...", end=" ", flush=True)
+def main():
+    parser = argparse.ArgumentParser(description="E1: Exact inverse-CDF baseline")
+    parser.add_argument("--n-values",  default="8,10,12")
+    parser.add_argument("--seeds",     type=int, default=4,
+                        help="Number of seeds per (family, n) pair (default 4, matching ess_sweep default)")
+    parser.add_argument("--families",  default=FAMILIES_DEFAULT)
+    parser.add_argument("--n-samples", type=int, default=N_SAMPLES)
+    args = parser.parse_args()
 
-        # ── Build P_theta ─────────────────────────────────────────────────
-        n_, edges, edge_theta, singleton_theta = _make_mrf_graph(family, n, seed)
-        p = _compute_log_prob_table(n_, edges, edge_theta, singleton_theta)
+    n_values  = [int(x) for x in args.n_values.split(",")]
+    fam_order = [x.strip() for x in args.families.split(",") if x.strip()]
+    n_samples = args.n_samples
+    n_seeds   = args.seeds
 
-        # ── E1 step 2: build CDF  (timed) ─────────────────────────────────
-        t0 = time.perf_counter()
-        cdf = np.cumsum(p)
-        cdf[-1] = 1.0                # ensure exactly 1.0 at end
-        t_preprocess = time.perf_counter() - t0
+    families  = family_registry()
+    rng_global = np.random.default_rng(1234)   # reproducible sub-rngs per instance
 
-        # ── E1 step 3: draw 3000 i.i.d. samples  (timed) ──────────────────
-        t1 = time.perf_counter()
-        sample_indices = exact_icdf_sample(cdf, N_SAMPLES)
-        t_sample = time.perf_counter() - t1
-        t_total = t_preprocess + t_sample
+    rows = []
+    for fam_name in fam_order:
+        if fam_name not in families:
+            raise ValueError(f"Unknown family '{fam_name}'. Available: {list(families)}")
+        for n in n_values:
+            for seed in range(n_seeds):
+                label = f"{fam_name}_n{n}_seed{seed}"
+                print(f"  {label} ...", end=" ", flush=True)
 
-        # ── E1 step 4: compute ESS from scalar (x_0 marginal) series ──────
-        scalar_series = [float((idx >> 0) & 1) for idx in sample_indices]
-        ess = compute_ess_from_series(scalar_series)
+                # ── Reconstruct instance exactly as in run_ess_sweep.py ───────
+                g      = families[fam_name](n, seed)
+                params = sample_mrf_params(g, seed=seed)
 
-        ess_per_s_sample_only = ess / t_sample if t_sample > 0 else float("inf")
-        ess_per_s_amortized   = ess / t_total  if t_total  > 0 else float("inf")
+                # ── Time the P_theta computation (shared preprocessing cost) ──
+                t_pre0 = time.perf_counter()
+                probs  = pairwise_probs_from_params(n, params)
+                t_preprocess_s = time.perf_counter() - t_pre0
 
-        results.append({
-            "instance_id":            iid,
-            "family":                 family,
-            "n":                      n,
-            "t_preprocess_s":         round(t_preprocess, 6),
-            "t_sample_s":             round(t_sample, 6),
-            "t_total_s":              round(t_total, 6),
-            "ess":                    round(ess, 4),
-            "ess_per_s_sample_only":  round(ess_per_s_sample_only, 4),
-            "ess_per_s_amortized":    round(ess_per_s_amortized, 4),
-        })
-        print(f"ESS={ess:.1f}  t_sample={t_sample:.3f}s  t_pre={t_preprocess:.4f}s")
+                # ── Quantum i.i.d. samples (np.random.choice on probs) ────────
+                # This matches run_ess_sweep.py exactly.
+                rng_inst = np.random.default_rng(rng_global.integers(2**31))
+                t_q0 = time.perf_counter()
+                q_idx    = rng_inst.choice(len(probs), size=n_samples, p=probs)
+                t_quantum_sample_s = time.perf_counter() - t_q0
+
+                q_series = _scalar_series(q_idx)
+                ess_ratio_q = ess_ratio_from_series(q_series)    # ratio in (0,1]
+                ess_q       = ess_ratio_q * n_samples            # absolute ESS
+                ess_per_s_q_sample_only = ess_q / max(1e-12, t_quantum_sample_s)
+                # Amortized = include the O(2^n) Hamiltonian-diagonal preprocessing
+                ess_per_s_q_amortized   = ess_q / max(1e-12, t_preprocess_s + t_quantum_sample_s)
+
+                # ── Exact inverse-CDF samples ─────────────────────────────────
+                icdf_idx, t_cdf_build_s, t_sample_s = _icdf_samples(
+                    probs, n_samples, rng_inst)
+                icdf_series = _scalar_series(icdf_idx)
+
+                ess_ratio_icdf = ess_ratio_from_series(icdf_series)
+                ess_icdf       = ess_ratio_icdf * n_samples
+                t_total_icdf   = t_cdf_build_s + t_sample_s     # same O(2^n) cost
+
+                ess_per_s_icdf_sample_only = ess_icdf / max(1e-12, t_sample_s)
+                ess_per_s_icdf_amortized   = ess_icdf / max(1e-12, t_total_icdf)
+
+                print(
+                    f"Q ESS={ess_q:.1f} ({ess_per_s_q_amortized:.0f}/s amort)  |  "
+                    f"CDF ESS={ess_icdf:.1f} ({ess_per_s_icdf_amortized:.0f}/s amort)  "
+                    f"(t_pre={t_preprocess_s:.4f}s  t_cdf_build={t_cdf_build_s:.5f}s  t_samp={t_sample_s:.4f}s)"
+                )
+
+                rows.append({
+                    "instance_id":                   label,
+                    "family":                        fam_name,
+                    "n":                             n,
+                    "seed":                          seed,
+                    # Preprocessing (shared cost)
+                    "t_preprocess_ptable_s":         round(t_preprocess_s, 6),
+                    # Quantum sampler
+                    "t_quantum_sample_s":            round(t_quantum_sample_s, 6),
+                    "ess_quantum":                   round(float(ess_q), 4),
+                    "ess_ratio_quantum":             round(float(ess_ratio_q), 6),
+                    "ess_per_s_quantum_sample_only": round(ess_per_s_q_sample_only, 4),
+                    "ess_per_s_quantum_amortized":   round(ess_per_s_q_amortized, 4),
+                    # Inverse-CDF sampler
+                    "t_cdf_build_s":                 round(t_cdf_build_s, 6),
+                    "t_icdf_sample_s":               round(t_sample_s, 6),
+                    "t_icdf_total_s":                round(t_total_icdf, 6),
+                    "ess_icdf":                      round(float(ess_icdf), 4),
+                    "ess_ratio_icdf":                round(float(ess_ratio_icdf), 6),
+                    "ess_per_s_icdf_sample_only":    round(ess_per_s_icdf_sample_only, 4),
+                    "ess_per_s_icdf_amortized":      round(ess_per_s_icdf_amortized, 4),
+                    # Ratio (icdf amortized vs quantum amortized)
+                    "ratio_icdf_over_quantum_amortized": round(
+                        ess_per_s_icdf_amortized / max(1e-12, ess_per_s_q_amortized), 4),
+                })
 
     # ── Summary ───────────────────────────────────────────────────────────────
-    mean_ess       = float(np.mean([r["ess"] for r in results]))
-    median_ess     = float(np.median([r["ess"] for r in results]))
-    mean_samp_only = float(np.mean([r["ess_per_s_sample_only"] for r in results]))
-    mean_amort     = float(np.mean([r["ess_per_s_amortized"] for r in results]))
+    def _mean(key): return float(np.mean([r[key] for r in rows]))
+    def _med(key):  return float(np.median([r[key] for r in rows]))
+    def _min(key):  return float(np.min([r[key] for r in rows]))
+    def _max(key):  return float(np.max([r[key] for r in rows]))
 
-    out = {
-        "generated_utc":           datetime.datetime.utcnow().isoformat(),
-        "n_instances":             len(results),
-        "families":                FAMILIES,
-        "burn_in":                 0,
-        "samples_per_instance":    N_SAMPLES,
-        "per_instance":            results,
-        "summary": {
-            "mean_ess":                    round(mean_ess, 4),
-            "median_ess":                  round(median_ess, 4),
-            "mean_ess_per_s_sample_only":  round(mean_samp_only, 4),
-            "mean_ess_per_s_amortized":    round(mean_amort, 4),
-        },
+    summary = {
+        "n_instances":                        len(rows),
+        # Quantum amortized ESS/s
+        "mean_ess_per_s_quantum_amortized":   round(_mean("ess_per_s_quantum_amortized"), 4),
+        "median_ess_per_s_quantum_amortized": round(_med ("ess_per_s_quantum_amortized"), 4),
+        # Inverse-CDF sample-only ESS/s
+        "mean_ess_per_s_icdf_sample_only":    round(_mean("ess_per_s_icdf_sample_only"), 4),
+        "median_ess_per_s_icdf_sample_only":  round(_med ("ess_per_s_icdf_sample_only"), 4),
+        # Inverse-CDF amortized ESS/s
+        "mean_ess_per_s_icdf_amortized":      round(_mean("ess_per_s_icdf_amortized"),   4),
+        "median_ess_per_s_icdf_amortized":    round(_med ("ess_per_s_icdf_amortized"),   4),
+        # Ratio: how many times faster is inverse-CDF (amortized) than quantum (amortized)
+        "mean_ratio_icdf_over_quantum_amortized":   round(_mean("ratio_icdf_over_quantum_amortized"), 4),
+        "median_ratio_icdf_over_quantum_amortized": round(_med ("ratio_icdf_over_quantum_amortized"), 4),
+        "min_ratio_icdf_over_quantum_amortized":    round(_min ("ratio_icdf_over_quantum_amortized"), 4),
+        "max_ratio_icdf_over_quantum_amortized":    round(_max ("ratio_icdf_over_quantum_amortized"), 4),
     }
 
-    os.makedirs("experiments/results", exist_ok=True)
-    out_path = "experiments/results/inverse_cdf_baseline.json"
-    with open(out_path, "w") as f:
+    out = {
+        "generated_utc":            datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "n_samples_per_instance":   n_samples,
+        "burn_in":                  BURN_IN,
+        "scalar_observable":        "hamming_weight",
+        "ess_metric":               "ess_ratio_from_series * n_samples  (matches run_ess_sweep.py)",
+        "per_instance":             rows,
+        "summary":                  summary,
+    }
+
+    out_dir  = os.path.join(os.path.dirname(__file__), "results")
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "inverse_cdf_baseline.json")
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)
 
     print(f"\n[E1] Done. Wrote {out_path}")
-    print(f"     mean ESS={mean_ess:.1f}  mean ESS/s (sample-only)={mean_samp_only:.1f}"
-          f"  mean ESS/s (amortized)={mean_amort:.1f}")
-    return out
+    print(f"     mean quantum amortized ESS/s = {summary['mean_ess_per_s_quantum_amortized']:.1f}")
+    print(f"     mean iCDF   amortized ESS/s  = {summary['mean_ess_per_s_icdf_amortized']:.1f}")
+    print(f"     mean iCDF/quantum ratio (amortized) = {summary['mean_ratio_icdf_over_quantum_amortized']:.2f}x")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="E1: Exact Inverse-CDF Baseline")
-    parser.add_argument("--n_max", type=int, default=99,
-                        help="Skip instances with n > n_max (for quick test)")
-    args = parser.parse_args()
-    run_e1(n_max=args.n_max)
+    main()

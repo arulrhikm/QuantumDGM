@@ -35,7 +35,7 @@ arulm@cs.cmu.edu}
 \maketitle
 
 \begin{abstract}
-Sampling from Markov random fields (MRFs) is a central but notoriously difficult problem in probabilistic inference, with exact methods scaling as $O(2^n)$ and classical Monte Carlo methods suffering from slow mixing, burn-in overhead, and sample correlation. We introduce a dual-mode quantum sampling framework for discrete graphical models combining amplitude encoding for small models and variational circuit compression for larger ones. Our primary completed finding is an ESS-gap characterization against two Gibbs baselines: across 60 instances spanning five graph families (barbell, barbell-path, chain, Erd\H{o}s--R\'enyi, two-clique) with 1\,000-step burn-in and 3\,000 retained samples, Quantum/Single-Site-Gibbs ESS ratios have mean $16.59$ (median $15.95$, range $[9.45,32.89]$), while Quantum/Block-Gibbs ESS ratios have mean $7.00$ (median $6.50$, range $[3.31,18.23]$). This narrows but does not eliminate the ESS gap, and quantifies the autocorrelation cost of baseline MCMC choices in this artifact. Amplitude encoding achieves near-unit fidelity ($F \approx 1.000$) at $n = 8, 10, 12$ on BlueQubit SV backends. In matched-budget crossover rows at $n = 8, 10, 12$, VQC achieves parameter reductions of $10.7\times$, $34.1\times$, and $113.8\times$ at fidelities $(F_{\mathrm{VQC}}, F_{\mathrm{MPS}}) = (0.306, 0.990)$, $(0.210, 0.958)$, and $(0.165, 0.878)$; no positive crossover $n^*$ is observed in committed runs. These results provide a reproducible benchmark baseline with concrete findings and a clearly delimited experimental agenda.
+Sampling from Markov random fields (MRFs) is a central but notoriously difficult problem in probabilistic inference, with exact methods scaling as $O(2^n)$ and classical Monte Carlo methods suffering from slow mixing, burn-in overhead, and sample correlation. We introduce a dual-mode quantum sampling framework for discrete graphical models combining amplitude encoding for small models and variational circuit compression for larger ones. Our primary completed finding is an ESS-gap characterization against three Gibbs baselines: across 60 instances spanning five graph families (barbell, barbell-path, chain, Erd\H{o}s--R\'enyi, two-clique) with 1\,000-step burn-in and 3\,000 retained samples, Quantum/Single-Site-Gibbs ESS ratios have mean $16.35$ (median $15.99$, range $[8.24,30.31]$); Quantum/Block-Gibbs ratios have mean $7.29$ (median $6.78$, range $[3.31,18.30]$); and Quantum/Tuned-Block-Gibbs ratios have mean $1.82$ (median $1.91$, range $[1.03, 2.43]$). This hierarchy quantifies the autocorrelation cost of each MCMC design choice and shows that a well-tuned classical block sampler substantially---though not fully---closes the ESS gap. Amplitude encoding achieves near-unit fidelity ($F \approx 1.000$) at $n = 8, 10, 12$ on BlueQubit SV backends. In matched-budget crossover rows at $n = 8, 10, 12$, VQC achieves parameter reductions of $10.7\times$, $34.1\times$, and $113.8\times$ at fidelities $(F_{\mathrm{VQC}}, F_{\mathrm{MPS}}) = (0.306, 0.990)$, $(0.210, 0.958)$, and $(0.165, 0.878)$; no positive crossover $n^*$ is observed. Multi-trial MPS scaling (three seeds per point, $n$ up to $40$) shows $\chi=32$ achieves $F=0.721\pm0.059$ at $n=40$, providing a concrete classical benchmark ceiling. All code and data are at \url{https://github.com/arulrhikm/QuantumDGM}.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -215,7 +215,7 @@ We report several approaches that did not work, along with the lessons learned:
 
 \textbf{Implementation.} We use Qiskit with local Aer simulation and BlueQubit cloud backends through a unified adapter layer in \texttt{src/backends.py}. All experiments use fixed random seeds for reproducibility. Classical baselines include exact inverse-CDF sampling (when full enumeration is feasible), Gibbs-style chains with burn-in, and BlueQubit MPS baselines where configured.
 
-\textbf{ESS baseline protocol.} For Experiment~D, we evaluate two Gibbs comparators over the same 60 instances: (i) random-scan single-site Gibbs and (ii) block Gibbs that updates a full maximal clique each step. Both use burn-in of 1000 steps and 3000 retained samples per instance; ESS is computed from scalar sample series using integrated autocorrelation-time estimation~\cite{geyer1992practical}. We report Quantum/Single-Site-Gibbs and Quantum/Block-Gibbs ESS ratios, plus wall-clock-normalized ESS diagnostics.
+\textbf{ESS baseline protocol.} For Experiment~D, we evaluate three Gibbs comparators over the same 60 instances: (i) random-scan single-site Gibbs, (ii) block Gibbs that updates a full maximal clique each step, and (iii) tuned block Gibbs that adapts block membership to the graph structure before the run begins. All use burn-in of 1000 steps and 3000 retained samples per instance; ESS is computed from scalar sample series using integrated autocorrelation-time estimation~\cite{geyer1992practical}. We report all three Quantum/Gibbs ESS ratios and wall-clock-normalized ESS/s diagnostics.
 
 \textbf{Validation.} The active repository validates behavior through executable experiment outputs and artifact checks (notably \texttt{experiments/verify\_paper\_artifacts.py}), including backend provenance fields, entanglement strategy comparisons, and generated table/figure consistency.
 
@@ -228,48 +228,43 @@ Our results section is organized to lead with the primary completed finding (ESS
 \subsection{Quantum Statistical Advantages (Primary Finding)}
 \label{sec:ess}
 
-Quantum amplitude encoding produces samples that are structurally independent across circuit executions, yielding $\tau \approx 1$ regardless of graph topology. We quantify the resulting ESS gap against two MCMC baselines (single-site Gibbs and block Gibbs) over 60 matched instances under the protocol in \S\ref{sec:setup}.
+Quantum amplitude encoding produces samples that are structurally independent across circuit executions, yielding $\tau \approx 1$ regardless of graph topology. We quantify the resulting ESS gap against three Gibbs baselines (single-site, block, and tuned-block) over 60 matched instances under the protocol in \S\ref{sec:setup}.
 
-Results are shown in Fig.~\ref{fig:expD_ess} and summarized below. For Quantum/Single-Site-Gibbs, ESS ratios are above one across all 60 instances, with mean $16.59$, median $15.95$, and range $[9.45,32.89]$. For Quantum/Block-Gibbs, the gap narrows but remains above one in the current artifact, with mean $7.00$, median $6.50$, and range $[3.31,18.23]$. Single-site family-level means are:
-\begin{itemize}[leftmargin=*, topsep=2pt, itemsep=2pt]
-    \item \textbf{Barbell ($15.66$):} Bottleneck structure remains challenging for single-site updates.
-    \item \textbf{Barbell-path ($17.86$):} Strong ESS gap persists on this hybrid bottleneck topology.
-    \item \textbf{Chain ($17.82$):} Largest family-level gap in the current single-site baseline artifact.
-    \item \textbf{Erd\H{o}s--R\'enyi ($16.21$):} Gaps remain substantial under mixed connectivity.
-    \item \textbf{Two-clique ($15.39$):} Consistently above-one ESS ratios, but lower than chain/barbell-path means.
-\end{itemize}
+Results are shown in Fig.~\ref{fig:expD_ess} and summarized in Table~\ref{tab:ess_baselines}. For Quantum/Single-Site-Gibbs, ESS ratios are above one across all 60 instances (mean $16.35$, median $15.99$, range $[8.24, 30.31]$). For Quantum/Block-Gibbs, the gap narrows but remains above one (mean $7.29$, median $6.78$, range $[3.31, 18.30]$). Against the strongest baseline, tuned-block Gibbs, the gap narrows further to a mean of $1.82$ (median $1.91$, range $[1.03, 2.43]$): a well-configured classical block sampler substantially---though not fully---closes the ESS gap relative to quantum i.i.d.\ sampling. This hierarchy across three baselines is the primary finding of this artifact.
 
-The ESS ratio vs.\ mixing-difficulty relationship (Fig.~\ref{fig:expD_ess}) shows only a weak global linear trend ($R^2\approx0.016$ for single-site), indicating that family/topology effects are more informative than a single global line fit for explaining ESS-ratio variation.
+The ESS ratio vs.\ mixing-difficulty relationship (Fig.~\ref{fig:expD_ess}) shows a weak global linear trend ($R^2\approx 0.00036$ for single-site), confirming that family/topology effects dominate over a single spectral-gap predictor.
 
 \begin{table}[t]
 \centering
-\caption{ESS-gap summary against two Gibbs baselines (60 instances).}
+\caption{ESS-gap summary against three Gibbs baselines (60 instances, 5 families). All values from \texttt{paper\_table\_metrics.json} generated 2026-04-27.}
 \label{tab:ess_baselines}
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Comparator} & \textbf{Mean} & \textbf{Median} & \textbf{Min} & \textbf{Max} \\
 \midrule
-Quantum / Single-site Gibbs & 16.59 & 15.95 & 9.45 & 32.89 \\
-Quantum / Block Gibbs & 7.00 & 6.50 & 3.31 & 18.23 \\
+Quantum / Single-site Gibbs & 16.35 & 15.99 & 8.24 & 30.31 \\
+Quantum / Block Gibbs       &  7.29 &  6.78 & 3.31 & 18.30 \\
+Quantum / Tuned-Block Gibbs &  1.82 &  1.91 & 1.03 &  2.43 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{table}[t]
 \centering
-\caption{Wall-clock-normalized ESS diagnostics (artifact means).}
+\caption{Wall-clock-normalized ESS diagnostics (mean over 60 instances from \texttt{paper\_table\_metrics.json}).}
 \label{tab:ess_per_sec}
 \begin{tabular}{lc}
 \toprule
 \textbf{Method} & \textbf{Mean ESS/s} \\
 \midrule
-Quantum i.i.d. sampler & 409.11 \\
-Single-site Gibbs & 0.82 \\
-Block Gibbs & 0.03 \\
+Quantum i.i.d.~sampler  & 714.01 \\
+Single-site Gibbs        &   3.43 \\
+Block Gibbs              &   0.089 \\
+Tuned-block Gibbs        &   0.120 \\
 \bottomrule
 \end{tabular}
 \par\smallskip
-{\footnotesize Reported ESS/s values follow the current artifact implementation and should be interpreted alongside preprocessing-cost caveats in \S\ref{sec:limitations_mcmc}.}
+{\footnotesize ESS/s values are artifact means and should be interpreted alongside preprocessing-cost caveats in \S\ref{sec:limitations_mcmc}.}
 \end{table}
 
 \subsection{Amplitude Encoding}
@@ -406,31 +401,38 @@ MPS sampling & 105.72 & Experiment B \\
 \label{fig:expB_headline}
 \end{figure}
 
-\subsection{MPS Scaling (Table-First View)}
+\subsection{MPS Scaling (Multi-Trial Results)}
 \label{sec:scaling}
 
-For the current artifact snapshot, Experiment~B3 has partial but non-trivial coverage (currently through $n=40$ for $\chi\in\{8,16,32\}$, single seed) and is represented as a table-first artifact. Table~\ref{tab:mps_scaling} reports generated values directly from \texttt{experiments/results/mps\_scaling.json}.
+Experiment~B3 now has three-seed coverage for $n\in\{12,24,32,40\}$ across $\chi\in\{8,16,32\}$, run on BlueQubit MPS with no Aer fallback. Table~\ref{tab:mps_scaling} reports mean fidelities and 95\% CIs directly from \texttt{paper\_table\_metrics.json} (generated 2026-04-27). Two key observations: at $n=12$, all bond dimensions achieve $F\ge0.993$, confirming near-exact MPS compression for small chains; at $n=40$, $\chi=32$ achieves $F=0.721\pm0.059$, establishing a concrete classical ceiling that future variational and quantum approaches at large $n$ should aim to exceed.
 
 \begin{table}[t]
 \centering
-\caption{Experiment B3 generated MPS scaling rows.}
+\caption{Experiment B3 MPS scaling (3 trials per point, 95\% CI from \texttt{paper\_table\_metrics.json}). Compression $={2^n}/{n_{\mathrm{MPS\,params}}}$.}
 \label{tab:mps_scaling}
-\begin{tabular}{lccccc}
+\begin{tabular}{lcc p{2.3cm} c}
 \toprule
-\textbf{$n$} & \textbf{$\chi$} & \textbf{$F_{\mathrm{MPS}}$} & \textbf{Comp.} & \textbf{Backend} & \textbf{Fallback} \\
+\textbf{$n$} & \textbf{$\chi$} & \textbf{$F_{\mathrm{MPS}}$ (mean$\,\pm\,$CI$_{95}$)} & \textbf{Compression} & \textbf{Trials} \\
 \midrule
-12 & 8 & 0.9953 & 3.12 & bluequbit\_mps & no \\
-24 & 8 & 0.3013 & 5890.88 & bluequbit\_mps & no \\
-24 & 16 & 0.4711 & 1481.04 & bluequbit\_mps & no \\
-24 & 32 & 0.6396 & 371.31 & bluequbit\_mps & no \\
-32 & 8 & 0.1341 & 1109237.42 & bluequbit\_mps & no \\
-32 & 16 & 0.3385 & 278460.02 & bluequbit\_mps & no \\
-32 & 32 & 0.6861 & 69759.73 & bluequbit\_mps & no \\
-40 & 8 & 0.0746 & 224573453.39 & bluequbit\_mps & no \\
-40 & 16 & 0.2069 & 56327439.95 & bluequbit\_mps & no \\
-40 & 32 & 0.7789 & 14104982.91 & bluequbit\_mps & no \\
+12 &  8 & $0.9936 \pm 0.0019$ &           $3.12$ & 3 \\
+12 & 16 & $0.9940 \pm 0.0009$ &           $0.79$ & 3 \\
+12 & 32 & $0.9939 \pm 0.0015$ &           $0.20$ & 3 \\
+\midrule
+24 &  8 & $0.2805 \pm 0.0384$ &        $5{,}891$ & 3 \\
+24 & 16 & $0.4860 \pm 0.0321$ &        $1{,}481$ & 3 \\
+24 & 32 & $0.6963 \pm 0.0602$ &          $371$ & 3 \\
+\midrule
+32 &  8 & $0.1508 \pm 0.0359$ &  $1{,}109{,}237$ & 3 \\
+32 & 16 & $0.3527 \pm 0.0519$ &    $278{,}460$ & 3 \\
+32 & 32 & $0.7134 \pm 0.0256$ &     $69{,}760$ & 3 \\
+\midrule
+40 &  8 & $0.0793 \pm 0.0259$ & $224{,}573{,}453$ & 3 \\
+40 & 16 & $0.2218 \pm 0.0433$ &  $56{,}327{,}440$ & 3 \\
+40 & 32 & $0.7209 \pm 0.0588$ &  $14{,}104{,}983$ & 3 \\
 \bottomrule
 \end{tabular}
+\par\smallskip
+{\footnotesize Backend: \texttt{bluequbit\_mps}, no Aer fallback on any row.}
 \end{table}
 
 \subsection{Amplitude Scaling (Table-First View)}
@@ -455,31 +457,31 @@ Experiment~C is also clearer as a generated table in the current near-unity-fide
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/expD_ess_vs_gap.png}
-\caption{ESS ratio (Quantum/Single-Site Gibbs) vs.\ mixing-difficulty proxy (Gibbs spectral gap estimate) across 60 instances and 5 graph families. $R^2 = 0.016$, indicating weak global linear dependence and dominant family/topology effects. Mean ratio $16.59$, range $[9.45, 32.89]$.}
+\caption{ESS ratio (Quantum/Single-Site Gibbs) vs.\ mixing-difficulty proxy (Gibbs spectral gap estimate) across 60 instances and 5 graph families. $R^2 = 0.00036$, slope ${=}0.688$, confirming dominant family/topology effects over a single spectral-gap predictor. Mean ratio $16.35$, range $[8.24, 30.31]$.}
 \label{fig:expD_ess}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Status of main experimental contributions in committed artifacts. ``Complete'' = results committed with full multi-seed coverage. ``Partial'' = some seeds/sizes committed, more needed. ``Open'' = not yet observed/established.}
+\caption{Status of main experimental contributions. ``Complete'' = full multi-seed results in \texttt{paper\_table\_metrics.json}. ``Partial'' = more runs needed. ``Open'' = not yet observed.}
 \label{tab:status}
 \begin{tabular}{p{3.2cm}p{1.4cm}p{3.0cm}}
 \toprule
 \textbf{Contribution} & \textbf{Status} & \textbf{Key metric / remaining target} \\
 \midrule
-ESS characterization (single-site + block Gibbs baselines, 5 families, 60 instances) & Complete with two baselines & Single-site mean $16.59$; block mean $7.00$ \\
+ESS characterization (3 baselines, 5 families, 60 instances) & Complete & Single-site $16.35$; block $7.29$; tuned-block $1.82$ \\
 \addlinespace
 Amplitude fidelity ($n=8,10,12$) & Complete & $F \approx 1.000$ on BQ SV \\
 \addlinespace
-VQC compression ($n=8,10,12$) & Partial & $10.7\times$--$113.8\times$; needs $n=14,16$ \\
+VQC compression ($n=8,10,12$) & Partial & $10.7\times$--$113.8\times$; needs tuned LR, $n=14,16$ \\
 \addlinespace
 VQC--MPS crossover $n^*$ & Open & Not observed at $n \leq 12$; target $n \in [14, 20]$ \\
 \addlinespace
-Clique entanglement advantage & Null at tested scales & Near-zero at current scales; demoted from contribution \\
+Clique entanglement advantage & Null at tested scales & Near-zero; demoted from contribution \\
 \addlinespace
-MPS scaling ($n \leq 40$, single seed) & Partial & Needs multi-seed and $n > 40$ coverage \\
+MPS scaling ($n\leq40$, 3 trials) & Complete & $\chi=32$ gives $F=0.721$ at $n=40$; extend $n>40$ \\
 \addlinespace
-Hardware run & Deferred to follow-up & No real-device results in this submission \\
+Hardware run & Deferred & No real-device results in this submission \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -490,11 +492,12 @@ This section interprets the committed artifact results, then connects them to pr
 
 \subsection{Key Findings and Insights}
 
-Three findings emerge from the committed artifacts, ordered by completeness:
+Four findings emerge from the committed artifacts (\texttt{paper\_table\_metrics.json}), ordered by completeness:
 \begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=3pt, parsep=0pt]
-    \item \textbf{ESS gap persists but narrows with stronger baseline.} Quantum/Single-Site-Gibbs ESS ratios average $16.59$, while Quantum/Block-Gibbs averages $7.00$ across the same 60 instances.
-    \item \textbf{Compression is real but crossover is not yet found.} VQC achieves $10.7\times$--$113.8\times$ compression at $n = 8, 10, 12$, but fidelity remains below MPS at matched parameter budgets. Whether a positive crossover $n^*$ exists at larger $n$ remains the central open question.
-    \item \textbf{Clique entanglement effect is within noise at current scales.} Mean $\Delta F_{\mathrm{clique-linear}} = -2.28 \times 10^{-4}$, while full entanglement shows modest positive gain ($+2.58 \times 10^{-3}$). The theoretical motivation for clique matching remains valid; larger $n$ and denser graphs are needed to test it properly.
+    \item \textbf{ESS hierarchy across three baselines.} Quantum/Single-Site-Gibbs ratios average $16.35$; Quantum/Block-Gibbs $7.29$; Quantum/Tuned-Block-Gibbs $1.82$ (all over 60 instances). The tuned-block result is the most actionable: a well-configured classical sampler largely closes the ESS gap, leaving a consistent but modest quantum advantage.
+    \item \textbf{MPS scales to $n=40$ with confidence intervals.} Three-seed evaluation confirms $\chi=32$ achieves $F=0.721\pm0.059$ at $n=40$, establishing a classical ceiling. At $n=12$, all $\chi$ values achieve $F\ge0.993$.
+    \item \textbf{Compression is real but crossover is not yet found.} VQC achieves $10.7\times$--$113.8\times$ compression at $n = 8, 10, 12$, but fidelity remains below MPS at matched parameter budgets. The crossover $n^*$ remains the central open question.
+    \item \textbf{Clique entanglement effect is within noise at current scales.} Mean $\Delta F_{\mathrm{clique-linear}} = -2.28 \times 10^{-4}$, while full entanglement shows modest positive gain ($+2.58 \times 10^{-3}$). Larger $n$ and denser graphs are needed.
 \end{itemize}
 
 \subsection{Conceptual Understanding}
@@ -512,19 +515,19 @@ Three findings emerge from the committed artifacts, ordered by completeness:
     \item \textbf{Reproducibility.} Fixed random seeds, documented hyperparameters, and reproducible example scripts facilitate independent verification and extension.
 \end{itemize}
 
-\subsection{Limitations and Failure Modes}
+\subsection{Limitations and Failure Modes}\label{sec:limitations_mcmc}
 \begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=2pt, parsep=0pt]
     \item \textbf{No exponential speedup.} Amplitude encoding requires classical computation of all $2^n$ probabilities, forgoing the potential exponential advantage of full QCGM Hamiltonian simulation. Implementing the ancilla-based real-part extraction needed for true exponential speedup would require an estimated $2$--$4$ weeks of additional engineering effort.
-    \item \textbf{Fidelity decay for large models.} In current scaling artifacts (see \texttt{figures/reviewer\_metrics.json}), fidelity generally declines as $n$ increases, highlighting the expressivity/optimization limits of shallow ans\"atze.
-    \item \textbf{Optimization scaling limits.} Parameter-shift training still requires repeated statevector evaluations and can become expensive as $n$ grows; for larger regimes, improved optimizers and lower-variance gradient strategies remain important future work.
-    \item \textbf{No physical-hardware noise modeling.} Our current experiments use simulator backends (Aer and BlueQubit simulator services). Deployment on real quantum hardware will require error mitigation such as readout correction, zero-noise extrapolation, and dynamical decoupling.
+    \item \textbf{Fidelity decay for large models.} Fidelity generally declines as $n$ increases (see Table~\ref{tab:mps_scaling} and \texttt{paper\_table\_metrics.json}), highlighting the expressivity/optimization limits of shallow ans\"atze.
+    \item \textbf{Optimization scaling limits.} Parameter-shift training requires repeated statevector evaluations; for larger regimes, improved optimizers and adaptive learning-rate schedules remain important future work.
+    \item \textbf{No physical-hardware noise modeling.} Our experiments use simulator backends (Aer and BlueQubit simulator services). Deployment on real quantum hardware will require readout correction, zero-noise extrapolation, and dynamical decoupling.
     \item \textbf{Failure modes at $n = 12$.}
         \begin{enumerate}[leftmargin=*]
             \item \emph{Barren plateaus:} $72$ parameters for $4096$ states can lead to vanishing gradients ($\|\nabla L\| \sim O(1/2^{n/2})$)~\cite{mcclean2018barren}, slowing optimization.
-            \item \emph{Limited entanglement:} sparse topologies may fail to capture long-range correlations, while denser entanglement can increase training cost substantially.
-            \item \emph{Initialization sensitivity:} optimization outcomes vary by seed, indicating a non-trivial landscape of local minima.
+            \item \emph{Limited entanglement:} sparse topologies may fail to capture long-range correlations.
+            \item \emph{Initialization sensitivity:} optimization outcomes vary by seed.
         \end{enumerate}
-    \item \textbf{What the ESS comparison does and does not show.}\label{sec:limitations_mcmc} The ESS experiments quantify autocorrelation costs for the implemented Gibbs baselines under this artifact protocol. They do not establish a universal quantum-over-classical advantage across stronger or differently optimized classical samplers.
+    \item \textbf{What the ESS comparison does and does not show.} The ESS experiments quantify autocorrelation costs for three Gibbs baselines under this artifact protocol. The tuned-block Gibbs result ($1.82\times$ mean ratio) is the most conservative and appropriate headline figure; it does not rule out stronger classical samplers with comparable autocorrelation.
 \end{itemize}
 
 \subsection{Method Selection Guidelines}
@@ -547,10 +550,10 @@ Longer-term, implementation of full QCGM on 50--100-qubit devices with error mit
 
 \section{Conclusion}
 
-We presented a dual-mode quantum sampling framework for discrete MRFs combining amplitude encoding with variational circuit compression, and reported three categories of committed findings. \emph{Primary:} quantum sampling shows a consistent ESS gap relative to the implemented Gibbs baselines across 60 instances and five graph families, with mean Quantum/Single-Site-Gibbs ratio $16.59$ and mean Quantum/Block-Gibbs ratio $7.00$. \emph{Secondary:} amplitude encoding achieves near-perfect fidelity at $n = 8, 10, 12$, validating the Hamiltonian construction and bit-ordering pipeline. \emph{In progress:} VQC delivers up to $113.8\times$ parameter reduction at $n = 12$ but remains below MPS in fidelity at matched parameter budgets; crossover $n^*$ is not yet established and remains the central open target, requiring runs at $n \in [14, 20]$ with multiple seeds. Table~\ref{tab:status} summarizes the full status. All code and artifacts are publicly available at \url{https://github.com/arulrhikm/QuantumDGM} under an MIT license.
+We presented a dual-mode quantum sampling framework for discrete MRFs combining amplitude encoding with variational circuit compression, and reported four categories of committed findings from \texttt{paper\_table\_metrics.json}. \emph{Primary:} quantum sampling shows a consistent ESS hierarchy across three Gibbs baselines over 60 instances and five graph families---single-site mean $16.35$, block mean $7.29$, tuned-block mean $1.82$---with the last being the most conservative and informative comparator. \emph{MPS scaling:} three-seed evaluation through $n=40$ confirms $\chi=32$ achieves $F=0.721\pm0.059$ at $n=40$, establishing a classical performance ceiling. \emph{Secondary:} amplitude encoding achieves near-perfect fidelity at $n = 8, 10, 12$. \emph{In progress:} VQC delivers up to $113.8\times$ parameter reduction at $n = 12$ but remains below MPS in fidelity; crossover $n^*$ is not yet established and remains the central open target. Table~\ref{tab:status} summarizes the full status. All code, data, and artifacts are publicly available at \url{https://github.com/arulrhikm/QuantumDGM} under an MIT license.
 
 \section*{Reproducibility Note}
-This manuscript version inlines artifact values (for Overleaf portability) from outputs generated on \texttt{2026-04-25 22:32:16 UTC}. The source-of-truth machine-readable results are in \texttt{experiments/results/*.json} and \texttt{figures/paper\_table\_metrics.json}. Experiment seeds are listed in \texttt{experiments/seeds.json}. To refresh the underlying experiment outputs and regenerate artifact summaries, run:
+This manuscript inlines artifact values from \texttt{paper\_table\_metrics.json} generated on \texttt{2026-04-27 09:03:28 UTC}. The file lives at the project root and at \texttt{figures/paper\_table\_metrics.json} (generated copy). Experiment seeds are in \texttt{experiments/seeds.json}. To regenerate, run:
 \begin{verbatim}
 python -m experiments.run_all_for_paper --fast
 python -m experiments.generate_paper_artifacts

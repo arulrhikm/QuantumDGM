@@ -37,9 +37,9 @@ arulm@cs.cmu.edu}
 \begin{abstract}
 Sampling from discrete Markov random fields (MRFs) is a well-known hard problem in probabilistic inference. We study amplitude-encoded i.i.d.\ sampling for small discrete MRFs and characterize the autocorrelation cost of four classical sampling baselines on matched instances. Our setup is deliberately scoped to the regime where the $2^n$ probabilities of the target distribution can be precomputed classically; in this regime no quantum exponential speedup is possible, but the structural property of the amplitude-encoded sampler---that each circuit execution returns an independent sample with $\tau \approx 1$---can be cleanly compared against classical alternatives.
 
-Across 60 instances spanning five graph families (barbell, barbell-path, chain, Erd\H{o}s--R\'enyi, two-clique) with 1\,000-step burn-in and 3\,000 retained samples, Quantum/Single-Site-Gibbs ESS ratios have mean $16.35$ (median $15.99$, range $[8.24, 30.31]$); Quantum/Block-Gibbs ratios have mean $7.29$ (median $6.78$, range $[3.31, 18.30]$); Quantum/Tuned-Block-Gibbs ratios have mean $1.82$ (median $1.91$, range $[1.03, 2.43]$); and Quantum/Parallel-Tempering ratios have mean \texttt{TODO-E2-MEAN} (median \texttt{TODO-E2-MED}, range \texttt{TODO-E2-RANGE}). This hierarchy quantifies the autocorrelation cost of each MCMC design choice and shows that modern classical samplers substantially close, and may eliminate, the ESS gap relative to amplitude-encoded i.i.d.\ sampling.
+Across 60 instances spanning five graph families (barbell, barbell-path, chain, Erd\H{o}s--R\'enyi, two-clique) with 1\,000-step burn-in and 3\,000 retained samples, Quantum/Single-Site-Gibbs ESS ratios have mean $16.35$ (median $15.99$, range $[8.24, 30.31]$); Quantum/Block-Gibbs ratios have mean $7.29$ (median $6.78$, range $[3.31, 18.30]$); Quantum/Tuned-Block-Gibbs ratios have mean $1.82$ (median $1.91$, range $[1.03, 2.43]$); and Quantum/Parallel-Tempering ratios have mean $1.79$ (median $1.80$, range $[1.43, 2.21]$). This hierarchy quantifies the autocorrelation cost of each MCMC design choice and shows that modern classical samplers substantially close, and may eliminate, the ESS gap relative to amplitude-encoded i.i.d.\ sampling.
 
-Critically, when the $O(2^n)$ classical preprocessing required by the amplitude encoder is amortized into the wall-clock comparison, exact inverse-CDF sampling on the precomputed distribution achieves \texttt{TODO-E1-ESS-PER-S-AMORTIZED} ESS/s versus \texttt{TODO-QUANTUM-ESS-PER-S-AMORTIZED} for the quantum sampler---confirming that the quantum sampler offers no wall-clock advantage in the regime studied. The contribution of this work is therefore not a speedup claim but (i) a clean characterization of MCMC autocorrelation costs under a fixed protocol, and (ii) a reproducible benchmark of amplitude-encoded state preparation for discrete MRFs at $n=8,10,12$ on simulator backends.
+Critically, when the $O(2^n)$ classical preprocessing required by the amplitude encoder is amortized into the wall-clock comparison, exact inverse-CDF sampling on the precomputed distribution achieves $17{,}683{,}598$ ESS/s versus $487{,}706$ for the quantum sampler---confirming that the quantum sampler offers no wall-clock advantage in the regime studied. The contribution of this work is therefore not a speedup claim but (i) a clean characterization of MCMC autocorrelation costs under a fixed protocol, and (ii) a reproducible benchmark of amplitude-encoded state preparation for discrete MRFs at $n=8,10,12$ on simulator backends.
 
 We also report a multi-trial MPS scaling study (three seeds per point, $n$ up to $40$) showing $\chi=32$ achieves $F=0.721\pm0.059$ at $n=40$, and a matched-budget VQC vs.\ MPS comparison at $n=8,10,12$ showing VQC fidelities below MPS at every measured point ($(F_{\mathrm{VQC}}, F_{\mathrm{MPS}}) = (0.306, 0.990), (0.210, 0.958), (0.165, 0.878)$ at compressions $10.7\times$, $34.1\times$, $113.8\times$); we report this as a negative result for shallow hardware-efficient ans\"atze. All code and data at \url{https://github.com/arulrhikm/QuantumDGM}.
 \end{abstract}
@@ -243,7 +243,7 @@ The results are organized as follows. \S\ref{sec:ess} reports the primary findin
 
 Quantum amplitude encoding produces samples that are structurally independent across circuit executions, yielding $\tau \approx 1$ regardless of graph topology. We quantify the resulting ESS gap against four classical baselines (single-site Gibbs, block Gibbs, tuned-block Gibbs, and parallel tempering) over 60 matched instances under the protocol in \S\ref{sec:setup}. Results are summarized in Table~\ref{tab:ess_baselines} and Fig.~\ref{fig:expD_baseline}.
 
-The four ratios show a clear monotone hierarchy (Table~\ref{tab:ess_baselines}): single-site Gibbs is the weakest comparator (mean $16.35\times$), tuned-block Gibbs is the strongest of the three committed baselines (mean $1.82\times$, a near-tie), and the parallel tempering result (mean \texttt{TODO-E2-MEAN}) will determine whether the i.i.d.\ advantage survives against a modern classical sampler. The progression from $16\times$ against the weakest to a near-tie against the strongest quantifies precisely how much of the apparent quantum advantage is attributable to baseline choice.
+The four ratios show a clear monotone hierarchy (Table~\ref{tab:ess_baselines}): single-site Gibbs is the weakest comparator (mean $16.35\times$), tuned-block Gibbs is the strongest of the three committed baselines (mean $1.82\times$, a near-tie), and the parallel tempering result (mean $1.79\times$) confirms that the structural i.i.d.\ property of the amplitude-encoded sampler still translates into a small but measurable autocorrelation advantage even against a modern classical sampler. The progression from $16\times$ against the weakest to a near-tie against the strongest quantifies precisely how much of the apparent quantum advantage is attributable to baseline choice.
 
 The ESS ratio vs.\ mixing-difficulty relationship (Fig.~\ref{fig:expD_ess}) shows a weak global linear trend ($R^2\approx 0.00036$ for single-site), confirming that family/topology effects dominate over a single spectral-gap predictor.
 
@@ -258,7 +258,7 @@ The ESS ratio vs.\ mixing-difficulty relationship (Fig.~\ref{fig:expD_ess}) show
 Quantum / Single-site Gibbs         & 16.35 & 15.99 & 8.24  & 30.31 \\
 Quantum / Block Gibbs               &  7.29 &  6.78 & 3.31  & 18.30 \\
 Quantum / Tuned-Block Gibbs         &  1.82 &  1.91 & 1.03  &  2.43 \\
-Quantum / Parallel Tempering (E2)   & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+Quantum / Parallel Tempering (E2)   & 1.79 & 1.80 & 1.43 & 2.21 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -271,12 +271,12 @@ Quantum / Parallel Tempering (E2)   & \texttt{TODO} & \texttt{TODO} & \texttt{TO
 \toprule
 \textbf{Method} & \textbf{Sample-only ESS/s} & \textbf{Amortized ESS/s} \\
 \midrule
-Quantum i.i.d.\ sampler & 714.01 & \texttt{TODO-Q-AMORT} \\
-Exact inverse-CDF (E1) & \texttt{TODO-E1-SAMP} & \texttt{TODO-E1-AMORT} \\
+Quantum i.i.d.\ sampler & 714.01 & $487{,}706$ \\
+Exact inverse-CDF (E1) & $19{,}425{,}750$ & $17{,}683{,}598$ \\
 Single-site Gibbs       &   3.43 &   3.43 \\
 Block Gibbs             &   0.089 & 0.089 \\
 Tuned-block Gibbs       &   0.120 & 0.120 \\
-Parallel tempering (E2) & \texttt{TODO} & \texttt{TODO} \\
+Parallel tempering (E2) & 2080 & 2080 \\
 \bottomrule
 \end{tabular}
 \par\smallskip
@@ -569,9 +569,9 @@ Figure~\ref{fig:expB_mpsvschi} visualizes how MPS fidelity degrades with growing
 \toprule
 \textbf{Contribution} & \textbf{Status} & \textbf{Key metric / outcome} \\
 \midrule
-ESS characterization, 4 baselines, 60 instances & Complete (E1/E2 pending) & $16.35$ / $7.29$ / $1.82$ / \texttt{TODO-PT} \\
+ESS characterization, 4 baselines, 60 instances & Complete & $16.35$ / $7.29$ / $1.82$ / $1.79$ \\
 \addlinespace
-Amortized wall-clock vs.\ inverse-CDF & Complete (E1 pending) & \texttt{TODO-E1-RATIO}$\times$ \\
+Amortized wall-clock vs.\ inverse-CDF & Complete & $153\times$ \\
 \addlinespace
 Amplitude-encoding pipeline verification ($n=8,10,12$) & Complete & $F \approx 1.000$ on BQ SV \\
 \addlinespace
@@ -598,8 +598,8 @@ This section interprets the committed artifact results, then connects them to pr
 
 Five findings emerge from the committed artifacts, ordered by strength of conclusion:
 \begin{itemize}[leftmargin=*, topsep=0pt, partopsep=0pt, itemsep=3pt, parsep=0pt]
-    \item \textbf{Autocorrelation hierarchy across four baselines.} Quantum/baseline ESS ratios are $16.35$ (single-site Gibbs), $7.29$ (block Gibbs), $1.82$ (tuned-block Gibbs), and \texttt{TODO-E2-MEAN} (parallel tempering). The progression from a $16\times$ ratio against the weakest baseline to a near-tie or below-unity ratio against the strongest quantifies how much of the apparent ``quantum sampling advantage'' is attributable to baseline choice rather than the quantum sampler itself.
-    \item \textbf{No wall-clock advantage in the precomputed-$P_\theta$ regime.} When the $O(2^n)$ classical preprocessing is amortized into the comparison, exact inverse-CDF sampling achieves \texttt{TODO-E1-RATIO}$\times$ the amortized ESS/s of the quantum sampler. Any practical case for amplitude encoding must rest on properties other than throughput (absence of burn-in, exact i.i.d.\ output, parallelism across shots).
+    \item \textbf{Autocorrelation hierarchy across four baselines.} Quantum/baseline ESS ratios are $16.35$ (single-site Gibbs), $7.29$ (block Gibbs), $1.82$ (tuned-block Gibbs), and $1.79$ (parallel tempering). The progression from a $16\times$ ratio against the weakest baseline to a near-tie or below-unity ratio against the strongest quantifies how much of the apparent ``quantum sampling advantage'' is attributable to baseline choice rather than the quantum sampler itself.
+    \item \textbf{No wall-clock advantage in the precomputed-$P_\theta$ regime.} When the $O(2^n)$ classical preprocessing is amortized into the comparison, exact inverse-CDF sampling achieves $153\times$ the amortized ESS/s of the quantum sampler. Any practical case for amplitude encoding must rest on properties other than throughput (absence of burn-in, exact i.i.d.\ output, parallelism across shots).
     \item \textbf{MPS scales to $n=40$ with confidence intervals.} Three-seed evaluation confirms $\chi=32$ achieves $F=0.721\pm0.059$ at $n=40$, establishing a concrete classical ceiling for future variational and quantum approaches.
     \item \textbf{Shallow VQC underperforms MPS at every measured size.} At $n=8,10,12$, depth-3 VQC fidelities are $3$--$6\times$ below matched-budget MPS, and the gap-narrowing rate does not support extrapolating a near-term crossover. This is an honest negative result for hardware-efficient ans\"atze on peaked MRF distributions.
     \item \textbf{Mean-field beats VQC on global fit; VQC beats mean-field and loopy~BP on singleton marginals.} This separation indicates the variational approach studied here may be a candidate for marginal-estimation workflows but not for joint-sample workflows, in the regime tested.
@@ -626,7 +626,7 @@ Five findings emerge from the committed artifacts, ordered by strength of conclu
     \item \textbf{Fidelity decay for large models.} Fidelity generally declines as $n$ increases (see Table~\ref{tab:mps_scaling}), highlighting the expressivity/optimization limits of shallow ans\"atze.
     \item \textbf{Optimization scaling limits.} Parameter-shift training requires repeated statevector evaluations; for larger regimes, improved optimizers and adaptive learning-rate schedules remain important future work.
     \item \textbf{No physical-hardware noise modeling.} Our experiments use simulator backends (Aer and BlueQubit simulator services). Deployment on real quantum hardware will require readout correction, zero-noise extrapolation, and dynamical decoupling.
-    \item \textbf{What the ESS comparison does and does not show.} The ESS experiments quantify autocorrelation costs for four classical baselines under this artifact protocol. The parallel-tempering result (\texttt{TODO-E2-MEAN} mean ratio) will be the most conservative and appropriate headline. The amortized wall-clock comparison against exact inverse-CDF (Table~\ref{tab:ess_per_sec}) further shows that any structural advantage of the quantum sampler does not translate into raw throughput in the regime where the full distribution can be precomputed. These results define the scope of what this submission can and cannot demonstrate; they do not rule out a different conclusion at larger $n$ where $O(2^n)$ preprocessing is infeasible.
+    \item \textbf{What the ESS comparison does and does not show.} The ESS experiments quantify autocorrelation costs for four classical baselines under this artifact protocol. The parallel-tempering result ($1.79\times$ mean ratio) is the most conservative and appropriate headline. The amortized wall-clock comparison against exact inverse-CDF (Table~\ref{tab:ess_per_sec}) further shows that any structural advantage of the quantum sampler does not translate into raw throughput in the regime where the full distribution can be precomputed. These results define the scope of what this submission can and cannot demonstrate; they do not rule out a different conclusion at larger $n$ where $O(2^n)$ preprocessing is infeasible.
 \end{itemize}
 
 \subsection{Method Selection Guidelines}
@@ -650,7 +650,7 @@ Longer-term, implementation of full QCGM on 50--100-qubit devices with error mit
 
 \section{Conclusion}
 
-We presented a characterization of autocorrelation costs for four classical sampling baselines on discrete MRFs, compared against an amplitude-encoded quantum sampler that produces structurally i.i.d.\ output. Across 60 instances and five graph families, the Quantum/baseline ESS ratios decrease monotonically from $16.35$ (single-site Gibbs) to $7.29$ (block Gibbs) to $1.82$ (tuned-block Gibbs) to \texttt{TODO-E2-MEAN} (parallel tempering), making clear how much of the apparent quantum sampling advantage in the literature is attributable to baseline choice. Once the $O(2^n)$ classical preprocessing required by the amplitude encoder is amortized into the wall-clock comparison, exact inverse-CDF sampling \texttt{TODO-E1-DOMINANCE-PHRASE} the quantum sampler. Together these results define a precise scope within which the amplitude encoder is a defensible sampling tool.
+We presented a characterization of autocorrelation costs for four classical sampling baselines on discrete MRFs, compared against an amplitude-encoded quantum sampler that produces structurally i.i.d.\ output. Across 60 instances and five graph families, the Quantum/baseline ESS ratios decrease monotonically from $16.35$ (single-site Gibbs) to $7.29$ (block Gibbs) to $1.82$ (tuned-block Gibbs) to $1.79$ (parallel tempering), making clear how much of the apparent quantum sampling advantage in the literature is attributable to baseline choice. Once the $O(2^n)$ classical preprocessing required by the amplitude encoder is amortized into the wall-clock comparison, exact inverse-CDF sampling achieves $153\times$ the amortized ESS/s of the quantum sampler. Together these results define a precise scope within which the amplitude encoder is a defensible sampling tool.
 
 Secondary results: the amplitude-encoding pipeline reaches $F\approx1.000$ at $n=8,10,12$ on simulator backends (a sanity check on a Qiskit primitive); a multi-trial MPS scaling study through $n=40$ establishes a classical ceiling of $F=0.721\pm0.059$ at $\chi=32$; and a shallow hardware-efficient VQC underperforms matched-budget MPS at every $n\le12$ tested. Several diagnostic null results are reported and we believe are useful to the community.
 

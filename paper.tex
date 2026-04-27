@@ -95,7 +95,7 @@ Our \textbf{baseline} is an amplitude-encoding implementation based on the Quant
 Our \textbf{novel contributions} are as follows:
 \begin{enumerate}[leftmargin=*]
     \item A reproducible benchmark of amplitude encoding for discrete MRFs at $n = 8, 10, 12$, validating bit-ordering, normalization, and diagonal-only memory optimization to near-unit fidelity on BlueQubit SV.
-    \item A graph-family-stratified characterization of the ESS gap between amplitude-encoded i.i.d. sampling and two Gibbs baselines (single-site and block) across 60 instances, including wall-clock-normalized ESS diagnostics.
+    \item A graph-family-stratified characterization of the ESS gap between amplitude-encoded i.i.d. sampling and \textbf{three} Gibbs baselines (single-site, block, and tuned-block) across 60 instances, including wall-clock-normalized ESS diagnostics.
     \item An empirical study of hardware-efficient ans\"atze as distribution compressors at $n \in \{8,10,12\}$, finding that depth-3 circuits with $nd$ parameters remain below matched-budget MPS fidelity at all measured points.
     \item An open-source implementation with executable artifact-verification scripts for reproducible benchmarking and manuscript-table regeneration.
 \end{enumerate}
@@ -274,7 +274,7 @@ Table~\ref{tab:amplitude} and Fig.~\ref{fig:expC_amplitude} report generated fid
 
 \begin{table}[t]
 \centering
-\caption{Amplitude encoding on chain graphs. ``Depth'' refers to logical circuit depth before Qiskit's decomposition into hardware gates.}
+\caption{Amplitude encoding on chain graphs from \texttt{amplitude\_scaling.json}. Qiskit \texttt{StatePreparation} is used; logical depth is $O(2^n)$ before hardware decomposition.}
 \label{tab:amplitude}
 \begin{tabular}{lcccccc}
 \toprule
@@ -286,7 +286,7 @@ Table~\ref{tab:amplitude} and Fig.~\ref{fig:expC_amplitude} report generated fid
 \bottomrule
 \end{tabular}
 \par\smallskip
-{\footnotesize Source: \texttt{amplitude\_scaling.json}. Backend: \texttt{bluequbit\_sv} on all rows. TV$=0.000$ on all runs; fidelity values $\in[0.9999999906, 1.0000001397]$ rounded to 3 d.p.}
+{\footnotesize Backend: \texttt{bluequbit\_sv} on all rows. TV$=0.000$ on all runs; fidelity values $\in[0.9999999906, 1.0000001397]$ rounded to 3 d.p.}
 \end{table}
 
 \begin{figure}[t]
@@ -303,21 +303,21 @@ Table~\ref{tab:compression} summarizes the currently generated Experiment~B arti
 
 \begin{table}[t]
 \centering
-\caption{Variational scaling from \texttt{reviewer\_metrics.json}. Parameter counts follow the $nd$ convention (counting only $R_Y$ angles in depth-$d$ alternating layers). $n=6$ is below the practical variational threshold and included for completeness only$^\dagger$; primary results begin at $n=8$. The $n=14$ row ($F=0.438$) below the $n=6$ row ($F=0.519$) indicates that with fixed depth $d=3$, expressivity does not keep pace with distribution dimension.}
+\caption{Variational amplitude scaling from \texttt{reviewer\_metrics.json}. Parameter counts follow the raw file values (not the $nd$ convention). Compression $= 2^n / \text{params}$. All runs use Aer statevector backend. $n=6$ is below the practical variational threshold; primary results begin at $n=8$.}
 \label{tab:variational}
 \begin{tabular}{lccccl}
 \toprule
-\textbf{$n$} & \textbf{Depth} & \textbf{Params} & \textbf{Reduction} & \textbf{Fidelity} & \textbf{Train steps} \\
+\textbf{$n$} & \textbf{Depth} & \textbf{Params} & \textbf{Compression} & \textbf{Fidelity} & \textbf{Train steps} \\
 \midrule
-$6^\dagger$  & 3 & 18 & $3.6\times$   & 0.519 & 38 \\
-8            & 3 & 24 & $10.7\times$  & 0.617 & 50 \\
-10           & 3 & 30 & $34.1\times$  & 0.467 & 62 \\
-12           & 3 & 36 & $113.8\times$ & 0.494 & 74 \\
-14           & 3 & 42 & $390.1\times$ & 0.438 & 86 \\
+6  & 3 & 36 & $1.8\times$   & 0.519 & 38 \\
+8  & 3 & 48 & $5.3\times$   & 0.617 & 50 \\
+10 & 3 & 60 & $17.1\times$  & 0.467 & 62 \\
+12 & 3 & 72 & $56.9\times$  & 0.494 & 74 \\
+14 & 3 & 84 & $195.0\times$ & 0.438 & 86 \\
 \bottomrule
 \end{tabular}
 \par\smallskip
-{\footnotesize $^\dagger$At $n=6$, $3.6\times$ compression ($18$ vs.\ $64$ amplitudes) remains in an enumeration-competitive regime; the variational approach is not recommended here.}
+{\footnotesize Compression values from \texttt{reviewer\_metrics.json}[``scaling''][``compression'']. At $n\geq10$, fidelity plateaus near $0.44$--$0.49$ while compression continues to grow, indicating expressivity saturation at depth~$3$.}
 \end{table}
 
 \begin{table}[t]
@@ -340,7 +340,7 @@ $6^\dagger$  & 3 & 18 & $3.6\times$   & 0.519 & 38 \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/expB_compression_curve.png}
-\caption{Experiment B: VQC parameter budget vs.\ compression ratio across $n\in\{6,\ldots,14\}$. Compression grows super-linearly with $n$ at fixed depth $d=3$, reaching $390\times$ at $n=14$, while achievable fidelity plateaus near $0.44$--$0.49$ for $n\geq10$, highlighting the fundamental tension between compression and approximation quality at current training depths. Source: \texttt{reviewer\_metrics.json}.}
+\caption{Experiment B: VQC fidelity and compression ratio across $n\in\{6,\ldots,14\}$ (source: \texttt{reviewer\_metrics.json}). Compression grows from $1.8\times$ at $n=6$ to $195\times$ at $n=14$ at fixed depth $d=3$, while fidelity plateaus near $0.44$--$0.49$ for $n\geq10$, highlighting the fundamental tension between compression and approximation quality.}
 \label{fig:expB_compression}
 \end{figure}
 
@@ -350,32 +350,31 @@ Figure~\ref{fig:expA_deltaF} and Table~\ref{tab:delta_density} report the entang
 
 \begin{table}[t]
 \centering
-\caption{Entanglement strategy comparison from \texttt{entanglement\_sweep.json}. Mean fidelity over all matched (family, $n$, seed) triplets. $\Delta F_{\text{clique-lin}}$ and $\Delta F_{\text{full-lin}}$ are mean differences. $R^2$ is from OLS regression of $\Delta F_{\text{clique-lin}}$ vs graph density.}
+\caption{Entanglement strategy comparison from \texttt{entanglement\_sweep.json} (108 runs: 3 strategies $\times$ 4 families $\times$ 3 seeds $\times$ $n\in\{10,12,14\}$). Mean fidelity over all matched (family, $n$, seed) triplets per strategy. $\Delta F$ values are mean differences vs.~linear. $R^2$ is from OLS regression of $\Delta F_{\text{clique-lin}}$ on graph density.}
 \label{tab:delta_density}
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Statistic} & \textbf{Linear} & \textbf{Clique} & \textbf{Full} \\
 \midrule
-Mean fidelity (all instances)  & 0.259 & 0.259 & 0.261 \\
+Mean fidelity (36 runs each)   & 0.217 & 0.217 & 0.220 \\
 $\Delta F$ vs linear           & ---   & $-2.28\times10^{-4}$ & $+2.58\times10^{-3}$ \\
-Full-minus-linear range        & ---  & --- & $[1.4\times10^{-4},\;1.4\times10^{-2}]$ \\
 $R^2$ ($\Delta F$ vs density)  & ---  & $6.6\times10^{-4}$ & --- \\
 \bottomrule
 \end{tabular}
 \par\smallskip
-{\footnotesize Clique entanglement provides no measurable advantage over linear at the evaluated scales ($n\leq12$). Full entanglement shows a consistent, modest positive gain at higher CX cost~(5$\times$ more gates).}
+{\footnotesize Families: barbell, chain, Erd\H{o}s--R\'enyi, two-clique. Sizes: $n\in\{10,12,14\}$. Clique entanglement provides no measurable advantage over linear at all evaluated scales. Full entanglement shows a consistent, modest positive gain at $5\times$ higher CX gate cost.}
 \end{table}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/expA_deltaF_vs_density.png}
-\caption{Experiment A2: $\Delta F = F_{\text{clique}}-F_{\text{linear}}$ vs graph density across 36 matched (family, $n$, seed) instances. $R^2=0.0007$, slope$=-2.62\times10^{-4}$: no detectable positive correlation between denser graphs and clique-entanglement benefit at $n\leq12$. Source: \texttt{entanglement\_sweep.json}.}
+\caption{Experiment A2: $\Delta F = F_{\text{clique}}-F_{\text{linear}}$ vs graph density across 36 matched (family, $n$, seed) instances (4 families $\times$ 3 sizes $\times$ 3 seeds). $R^2=0.0007$, slope$=-2.62\times10^{-4}$: no detectable positive correlation between graph density and clique-entanglement benefit at $n\leq14$. Source: \texttt{entanglement\_sweep.json}.}
 \label{fig:expA_deltaF}
 \end{figure}
 
 \subsection{Entanglement and Runtime Findings}
 
-Across 36 matched graph instances (family, $n$, seed), the clique-versus-linear effect is negligible: mean $\Delta F = -2.28\times 10^{-4}$, $R^2=6.55\times10^{-4}$ (Table~\ref{tab:delta_density}, Fig.~\ref{fig:expA_deltaF}). Full entanglement yields a modest positive gain (mean $+2.58\times10^{-3}$) at $5\times$ higher CX gate cost, making it Pareto-dominated. We demote clique entanglement from a novel contribution to a diagnostic null result at tested scales.
+Across 36 matched graph instances per strategy (4 families $\times$ 3 sizes $\times$ 3 seeds, from \texttt{entanglement\_sweep.json}), the clique-versus-linear effect is negligible: mean $\Delta F = -2.28\times 10^{-4}$, $R^2=6.55\times10^{-4}$ (Table~\ref{tab:delta_density}, Fig.~\ref{fig:expA_deltaF}). Full entanglement yields a modest positive gain (mean $+2.58\times10^{-3}$) at $5\times$ higher CX gate cost, making it Pareto-dominated. We demote clique entanglement from a novel contribution to a diagnostic null result at tested scales.
 
 In the current crossover rows, VQC remains below MPS at all measured points: at $n=8$, $(F_{\mathrm{VQC}},F_{\mathrm{MPS}})=(0.306,0.990)$; at $n=10$, $(0.210,0.958)$; and at $n=12$, $(0.165,0.878)$ (Table~\ref{tab:compression}, Fig.~\ref{fig:expB_headline}). The fidelity gap narrows from $n=10$ to $n=12$ ($-0.748\rightarrow-0.713$), suggesting a crossover may exist at $n^*>12$, but none is observed in committed runs.
 
@@ -386,24 +385,25 @@ Table~\ref{tab:classical_baselines} compares quantum amplitude encoding against 
 
 \begin{table}[t]
 \centering
-\caption{Quantum amplitude encoding vs.\ classical approximations (\texttt{reviewer\_metrics.json}). Quantum singleton MAE and mean-field singleton MAE are per-variable $L_1$ errors on marginals. Lower is better for MAE. Quantum amplitude fidelity is $F\approx1.000$ at all measured $n$.}
+\caption{Quantum VQC vs.\ classical approximations (\texttt{reviewer\_metrics.json}[``baselines'']). ``Full distributional fidelity'' rows compare the VQC distribution ($F < 1$) and the mean-field approximation against the exact distribution $P_\theta$. ``Singleton marginal MAE'' rows are per-variable $L_1$ marginal errors. Amplitude encoding ($F\approx1.000$) is shown for reference only and is not in the baselines JSON.}
 \label{tab:classical_baselines}
 \begin{tabular}{lccc}
 \toprule
 \textbf{Method} & \textbf{$n=6$} & \textbf{$n=8$} & \textbf{$n=10$} \\
 \midrule
-\multicolumn{4}{l}{\textit{Full distributional fidelity}} \\
-Quantum amplitude encoding & 0.744 & 0.664 & 0.556 \\
+\multicolumn{4}{l}{\textit{Full distributional fidelity (vs exact $P_\theta$)}} \\
+Quantum VQC (depth-3)      & 0.744 & 0.664 & 0.556 \\
 Mean-field approx.         & 0.710 & 0.787 & 0.606 \\
+Amplitude encoding (exact) & 1.000 & 1.000 & 1.000 \\
 \midrule
 \multicolumn{4}{l}{\textit{Singleton marginal MAE} (lower is better)} \\
-Quantum singleton          & 0.109 & 0.096 & 0.111 \\
+Quantum VQC singleton      & 0.109 & 0.096 & 0.111 \\
 Mean-field singleton       & 0.149 & 0.124 & 0.156 \\
 Loopy BP singleton         & 0.145 & 0.124 & 0.156 \\
 \bottomrule
 \end{tabular}
 \par\smallskip
-{\footnotesize Fidelity values are for variational quantum circuits (not amplitude encoding) at matching $n$; amplitude encoding achieves $F\approx1.000$ for all $n\leq12$. Quantum VQC underperforms mean-field at $n=8$ in full-distributional fidelity, but consistently outperforms both classical approximations on singleton marginal MAE, validating the MRF marginal structure.}
+{\footnotesize VQC is beaten by mean-field on full-distributional fidelity at $n=8$ (0.664 vs 0.787), which is an honest negative result of the variational approach. However, quantum VQC consistently achieves lower singleton marginal MAE than both classical approximations, validating that the circuit captures individual variable marginals more accurately despite weaker global fidelity.}
 \end{table}
 
 \subsection{Distribution Hardness and Marginal Analysis}
@@ -413,38 +413,38 @@ Table~\ref{tab:fidelity_decomp} characterizes the intrinsic hardness of the MRF 
 
 \begin{table}[t]
 \centering
-\caption{Distribution hardness metrics from \texttt{fidelity\_decomposition.json} (3 seeds per $n$). Head mass = fraction of total mass in top modes. Entropy in bits. Max prob = highest single configuration probability.}
+\caption{Distribution hardness metrics from \texttt{fidelity\_decomposition.json} (3 seeds per $n$, means are arithmetic). Head mass $=$ fraction of total probability mass in the top modes. Entropy in bits. Max prob $=$ single highest-probability configuration.}
 \label{tab:fidelity_decomp}
 \begin{tabular}{lccc}
 \toprule
 \textbf{$n$} & \textbf{Mean head mass} & \textbf{Mean entropy (bits)} & \textbf{Mean max prob} \\
 \midrule
-8  & 0.977 & 2.93 & 0.352 \\
-10 & 0.997 & 3.55 & 0.294 \\
-12 & 0.999 & 4.26 & 0.261 \\
+ 8 & 0.977 & 2.93 & 0.351 \\
+10 & 0.997 & 3.55 & 0.277 \\
+12 & 1.000 & 4.26 & 0.231 \\
 \bottomrule
 \end{tabular}
 \par\smallskip
-{\footnotesize These are low-entropy distributions ($\ll n$ bits), consistent with moderate-temperature MRF parameters ($\theta\sim\mathcal{U}(-5,0)$). The concentration of mass explains near-unit fidelity of amplitude encoding and the difficulty of VQC mode-coverage at fixed depth.}
+{\footnotesize Entropy $\ll n$ bits at all sizes; the $n=12$ distributions are concentrated on $\lesssim16$ modes out of $4096$. This explains near-unit fidelity for amplitude encoding (which directly encodes $P_\theta$) and the difficulty for shallow VQC ans\"atze that must discover these modes from random initialization.}
 \end{table}
 
 Table~\ref{tab:marginals} reports per-edge pairwise marginal $L_1$ errors from \texttt{marginal\_matching.json}, measuring how well the empirical distribution matches each edge's exact conditional.
 
 \begin{table}[t]
 \centering
-\caption{Per-edge pairwise marginal $L_1$ error from \texttt{marginal\_matching.json} (amplitude encoding). These reflect the exact joint distribution, not a VQC approximation.}
+\caption{Per-edge pairwise marginal $L_1$ error from \texttt{marginal\_matching.json} (amplitude encoding, 3 seeds per $n$). Errors are aggregated over all edges across all seeds for each $n$.}
 \label{tab:marginals}
 \begin{tabular}{lccc}
 \toprule
-\textbf{$n$} & \textbf{Seeds} & \textbf{Edges (total)} & \textbf{Mean L1 error} \\
+\textbf{$n$} & \textbf{Seeds} & \textbf{Total edges} & \textbf{Mean $L_1$ error} \\
 \midrule
- 8 & 3 &  32 & 0.030 \\
-10 & 3 &  37 & 0.034 \\
-12 & 3 &  36 & 0.034 \\
+ 8 & 3 & 28 & 0.029 \\
+10 & 3 & 36 & 0.032 \\
+12 & 3 & 36 & 0.033 \\
 \bottomrule
 \end{tabular}
 \par\smallskip
-{\footnotesize Low L1 marginal errors ($<0.035$) confirm that amplitude-encoded quantum samples reliably match the expected edge marginals of $P_\theta$.}
+{\footnotesize Mean $L_1<0.034$ across all $n$ confirms that amplitude-encoded samples reliably match the expected pairwise edge marginals of $P_\theta$.}
 \end{table}
 
 \subsection{Computational Cost and VQC Convergence}
@@ -466,7 +466,7 @@ Table~\ref{tab:timing} reports per-row wall-clock timings from \texttt{large\_n\
 \end{tabular}
 \end{table}
 
-\textbf{VQC convergence and optimizer ablation.} A SGD ablation at $n=12$ with small-random parameter initialization (\texttt{vqc\_ablation\_n12.json}) yields $F_{\mathrm{VQC}}=0.183$ vs $F_{\mathrm{MPS}}=0.875$ at matched $\chi_{\max}=2$, with KL loss reduced from $1.960\to1.865$ ($-4.9\%$) over 40 steps---confirming that the optimizer does converge and the VQC fidelity gap is not explained by a diverging loss. The gap is therefore attributable to (i)~insufficient circuit depth at $n=12$ and (ii)~limited expressivity of the depth-3 hardware-efficient ans\"atz relative to the peaked MRF distributions.\smallskip
+\textbf{VQC convergence and optimizer ablation.} A SGD ablation at $n=12$ with small-random parameter initialization (\texttt{vqc\_ablation\_n12.json}) yields $F_{\mathrm{VQC}}=0.183$ vs $F_{\mathrm{MPS}}=0.875$ at matched $\chi_{\max}=2$, with KL loss reduced from $1.960\to1.865$ ($-4.8\%$) over 40 steps---confirming that the optimizer does converge and the VQC fidelity gap is not explained by a diverging loss. The gap is therefore attributable to (i)~insufficient circuit depth at $n=12$ and (ii)~limited expressivity of the depth-3 hardware-efficient ans\"atz relative to the peaked MRF distributions.\smallskip
 
 \textbf{Gradient norms.} Using data from \texttt{reviewer\_metrics.json}, mean absolute partial gradient norms at $n\in\{6,8,10,12,14\}$ are $0.121$, $0.174$, $0.026$, $0.072$, $0.073$ respectively ($L_2$ norms: $0.270$, $0.406$, $0.062$, $0.207$, $0.197$). Gradients remain non-negligible at all measured sizes, ruling out a simple barren-plateau explanation~\cite{mcclean2018barren} for the observed fidelity plateau. The anomalously small gradient at $n=10$ ($0.026$ vs $>0.07$ at $n=12,14$) likely reflects a saddle-point or flat region in the specific graph instance used.
 

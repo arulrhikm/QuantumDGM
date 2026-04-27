@@ -1,389 +1,315 @@
 """
 experiments/run_parallel_tempering_baseline.py
 ===============================================
-E2 — Parallel Tempering Baseline (Experiment E2 from revised_plan_v4.tex)
+E2 — Parallel Tempering Baseline  (Experiment E2 from revised_plan_v4.tex)
 
-Motivation
-----------
-The current strongest classical baseline is tuned-block Gibbs (mean ratio
-1.82×).  Reviewer concern C4 notes this is a near-tie; modern MCMC for
-peaked discrete distributions typically uses tempering.  Adding a parallel-
-tempering (PT) baseline tests whether the residual quantum advantage survives
-against a state-of-the-art discrete sampler.
+This script uses the IDENTICAL instance-generation pipeline as run_ess_sweep.py:
+  - graph_families.family_registry() + sample_mrf_params()
+  - src.amplitude_encoding.pairwise_probs_from_params()
+  - src.metrics.ess_ratio_from_series()   (returns ESS/N ratio in (0,1])
+
+The Gibbs sweep inside each replica operates on integer state indices using
+the precomputed `probs` array directly (the same approach as run_ess_sweep.py),
+giving O(2^n) per site update — consistent with the single-site Gibbs baseline.
+
+The scalar observable is Hamming weight (bin(x).count("1")), matching ess_sweep.
 
 Protocol (from revised_plan_v4.tex §2.2)
 -----------------------------------------
-For each of the 60 instances:
-  - K = 8 replicas at geometric inverse-temperature ladder
-    beta_k = beta_min * (beta_max/beta_min)^{k/(K-1)},  k=0..K-1
-    beta_min = 0.1, beta_max = 1.0  (target is beta = 1.0)
-  - Each replica runs internal single-site Gibbs sweeps
-  - Replica swap proposals every L_swap = 10 within-replica sweeps
-    using standard Metropolis swap acceptance
-  - Burn-in: 1000 within-replica sweeps per replica (matching other baselines)
-  - Retain 3000 samples from the beta=1 replica only
-  - Total wall-clock = sum over all replicas
+  K = 8 replicas, geometric beta ladder in [beta_min=0.1, beta_max=1.0]
+  Replica swap proposals every L_swap = 10 within-replica sweeps (Metropolis)
+  Burn-in: 1000 within-replica sweeps per replica
+  3000 retained samples from the beta=1.0 replica
+  Total wall-clock = all replica work combined
 
 Output
 ------
-  experiments/results/parallel_tempering_baseline.json  (schema per plan)
+  experiments/results/parallel_tempering_baseline.json
 
 Usage
 -----
-  python experiments/run_parallel_tempering_baseline.py
-  python experiments/run_parallel_tempering_baseline.py --n_max 12
-  python experiments/run_parallel_tempering_baseline.py --n_replicas 4   # faster test
+  python -m experiments.run_parallel_tempering_baseline
+  python -m experiments.run_parallel_tempering_baseline --n-replicas 4 --seeds 1
 """
 
-import json
-import time
+from __future__ import annotations
+
 import argparse
 import datetime
-import os
+import json
 import math
+import os
+import time
+
 import numpy as np
 
-# ── Reuse the same MRF builder from E1 ──────────────────────────────────────
-# (copy inline so this script is standalone; users can refactor if src/ allows)
-
-def _make_mrf_graph(family: str, n: int, seed: int):
-    rng = np.random.default_rng(seed)
-    nodes = list(range(n))
-
-    if family == "chain":
-        edges = [(i, i + 1) for i in range(n - 1)]
-    elif family == "barbell":
-        half = n // 2
-        edges = []
-        for i in range(half):
-            for j in range(i + 1, half):
-                edges.append((i, j))
-        for i in range(half, n):
-            for j in range(i + 1, n):
-                edges.append((i, j))
-        edges.append((half - 1, half))
-    elif family == "barbell_path":
-        half = n // 2
-        edges = []
-        for i in range(half):
-            for j in range(i + 1, half):
-                edges.append((i, j))
-        for i in range(half, n):
-            for j in range(i + 1, n):
-                edges.append((i, j))
-        for k in range(half - 1, half):
-            edges.append((k, k + 1))
-    elif family == "erdos_renyi":
-        p_edge = 0.5
-        edges = []
-        for i in range(n):
-            for j in range(i + 1, n):
-                if rng.random() < p_edge:
-                    edges.append((i, j))
-        if not edges:
-            edges = [(0, 1)]
-    elif family == "two_clique":
-        half = n // 2
-        edges = []
-        for i in range(half):
-            for j in range(i + 1, half):
-                edges.append((i, j))
-        for i in range(half, n):
-            for j in range(i + 1, n):
-                edges.append((i, j))
-        edges.append((0, half))
-    else:
-        raise ValueError(f"Unknown family: {family}")
-
-    rng2 = np.random.default_rng(seed + 1000)
-    edge_theta = {}
-    for e in edges:
-        edge_theta[e] = rng2.uniform(-5.0, 0.0, size=(2, 2))
-
-    singleton_theta = {}
-    for i in nodes:
-        singleton_theta[i] = rng2.uniform(-5.0, 0.0, size=(2,))
-
-    return n, edges, edge_theta, singleton_theta
+from experiments.graph_families import family_registry, sample_mrf_params
+from src.amplitude_encoding import pairwise_probs_from_params
+from src.metrics import ess_ratio_from_series
 
 
-def _log_unnorm(state: list, n: int, edges, edge_theta, singleton_theta,
-                beta: float) -> float:
-    lp = 0.0
-    for i, s in enumerate(state):
-        lp += singleton_theta[i][s]
-    for e in edges:
-        lp += edge_theta[e][state[e[0]], state[e[1]]]
-    return beta * lp
+N_SAMPLES     = 3000
+BURN_IN       = 1000
+K_REPLICAS    = 8
+BETA_MIN      = 0.1
+BETA_MAX      = 1.0
+L_SWAP        = 10
+FAMILIES_DEFAULT = "chain,erdos_renyi,two_clique,barbell,barbell_path"
 
 
-def gibbs_sweep(state: list, n: int, edges, edge_theta, singleton_theta,
-                beta: float, rng: np.random.Generator) -> list:
-    """One full random-scan single-site Gibbs sweep at inverse temperature beta."""
-    state = list(state)
-    for i in rng.permutation(n):
-        # compute conditional log-probs for x_i = 0, 1
-        log_probs = []
-        for val in [0, 1]:
-            s = state[:]
-            s[i] = val
-            log_probs.append(_log_unnorm(s, n, edges, edge_theta, singleton_theta, beta))
-        # numerically stable softmax → sample
-        lp_max = max(log_probs)
-        probs = [math.exp(lp - lp_max) for lp in log_probs]
-        z = sum(probs)
-        p0 = probs[0] / z
-        state[i] = 0 if rng.random() < p0 else 1
+def _tempered_probs(probs: np.ndarray, beta: float) -> np.ndarray:
+    """
+    Return probs^beta / Z(beta).
+    Uses log-space for numerical stability.
+    """
+    log_p = np.log(np.maximum(probs, 1e-300))
+    log_pb = beta * log_p
+    log_pb -= log_pb.max()
+    pb = np.exp(log_pb)
+    return pb / pb.sum()
+
+
+def _single_site_gibbs_step(
+    state: int, n: int, probs: np.ndarray, beta: float, rng: np.random.Generator
+) -> int:
+    """
+    One random-site Gibbs update using the precomputed prob table.
+    Matches the logic in run_ess_sweep.py:gibbs_sample_from_exact but for
+    an arbitrary beta (via tempered_probs).
+    """
+    # Pick a random variable
+    i = int(rng.integers(n))
+    mask = 1 << i
+    s0 = state & ~mask           # bit i = 0
+    s1 = s0 | mask               # bit i = 1
+    # Tempered conditional (proportional to probs^beta at these two states)
+    p0 = float(probs[s0]) ** beta
+    p1 = float(probs[s1]) ** beta
+    z  = p0 + p1 + 1e-300
+    return s1 if rng.random() < p1 / z else s0
+
+
+def _gibbs_sweep(
+    state: int, n: int, probs: np.ndarray, beta: float, rng: np.random.Generator
+) -> int:
+    """One full random-scan single-site sweep (n individual updates)."""
+    for _i in rng.integers(n, size=n):   # random scan
+        mask = 1 << int(_i)
+        s0 = state & ~mask
+        s1 = s0 | mask
+        p0 = float(probs[s0]) ** beta
+        p1 = float(probs[s1]) ** beta
+        z  = p0 + p1 + 1e-300
+        state = s1 if rng.random() < p1 / z else s0
     return state
 
 
-def compute_ess_from_series(series: list) -> float:
-    n = len(series)
-    if n < 4:
-        return float(n)
-    arr = np.array(series, dtype=float)
-    arr -= arr.mean()
-    var = np.var(arr)
-    if var < 1e-12:
-        return float(n)
-    gamma0 = np.dot(arr, arr) / n
-    iat = 1.0
-    for lag in range(1, n // 2):
-        gamma = np.dot(arr[:-lag], arr[lag:]) / n
-        rho = gamma / gamma0
-        if rho <= 0.0:
-            break
-        iat += 2.0 * rho
-    return float(n) / max(iat, 1.0)
-
-
-FAMILIES = ["barbell", "barbell_path", "chain", "erdos_renyi", "two_clique"]
-N_INSTANCES_PER_FAMILY = 12
-N_PER_FAMILY = 10
-N_SAMPLES = 3000
-BURN_IN = 1000
-K_REPLICAS = 8
-BETA_MIN = 0.1
-BETA_MAX = 1.0
-L_SWAP = 10          # swap proposal every L_swap within-replica sweeps
-
-
-def make_instance_list(n_max: int = 99):
-    instances = []
-    for family in FAMILIES:
-        for inst_idx in range(N_INSTANCES_PER_FAMILY):
-            seed = 42 + inst_idx * 7 + FAMILIES.index(family) * 100
-            n = N_PER_FAMILY
-            if n > n_max:
-                continue
-            instances.append({
-                "instance_id": f"{family}_n{n}_seed{seed}",
-                "family": family,
-                "n": n,
-                "seed": seed,
-                "inst_idx": inst_idx,
-            })
-    return instances
-
-
-def run_parallel_tempering(n: int, edges, edge_theta, singleton_theta,
-                            n_replicas: int, beta_min: float, beta_max: float,
-                            l_swap: int, burn_in: int, n_samples: int,
-                            seed: int):
+def _swap_log_accept(probs: np.ndarray, s1: int, s2: int,
+                     beta1: float, beta2: float) -> float:
     """
-    Run parallel tempering and return (samples_from_target, swap_acc_rate, t_total_s).
-    samples_from_target: list of length n_samples from the beta=1 replica.
+    Log Metropolis acceptance ratio for swapping replicas at beta1, beta2.
+    log alpha = (beta2 - beta1) * (log p(s1) - log p(s2))
     """
-    rng = np.random.default_rng(seed + 9999)
+    log_p1 = math.log(max(float(probs[s1]), 1e-300))
+    log_p2 = math.log(max(float(probs[s2]), 1e-300))
+    return (beta2 - beta1) * (log_p1 - log_p2)
 
-    # Geometric beta ladder
+
+def run_pt(probs: np.ndarray, n: int, n_replicas: int,
+           beta_min: float, beta_max: float, l_swap: int,
+           burn_in: int, n_samples: int, seed: int):
+    """
+    Full parallel-tempering run on a single instance.
+
+    Returns
+    -------
+    samples        : np.ndarray of int, shape (n_samples,)  — from beta=1 replica
+    swap_acc_rate  : float — mean swap acceptance rate
+    t_total_s      : float — total wall-clock (all replicas)
+    """
+    rng = np.random.default_rng(seed)
+
+    # Geometric beta ladder; last entry is beta_max = 1.0 (target)
     if n_replicas == 1:
-        betas = [beta_max]
+        betas = np.array([beta_max])
     else:
-        betas = [beta_min * (beta_max / beta_min) ** (k / (n_replicas - 1))
-                 for k in range(n_replicas)]
+        betas = np.array([
+            beta_min * (beta_max / beta_min) ** (k / (n_replicas - 1))
+            for k in range(n_replicas)
+        ])
+    target_idx = n_replicas - 1    # betas[-1] = beta_max = 1.0
 
-    # Initialize replicas to random states
-    replicas = [[int(rng.random() < 0.5) for _ in range(n)]
-                for _ in range(n_replicas)]
+    # Initialise each replica to a random configuration
+    states = [int(rng.integers(2**n)) for _ in range(n_replicas)]
 
-    n_swap_attempts = 0
-    n_swap_accepted = 0
+    n_swap_prop = 0
+    n_swap_acc  = 0
 
-    t_start = time.perf_counter()
+    t0 = time.perf_counter()
 
     # ── Burn-in ───────────────────────────────────────────────────────────────
     for sweep in range(burn_in):
         for k in range(n_replicas):
-            replicas[k] = gibbs_sweep(
-                replicas[k], n, edges, edge_theta, singleton_theta, betas[k], rng)
-        # Swap proposals every l_swap sweeps
+            states[k] = _gibbs_sweep(states[k], n, probs, betas[k], rng)
         if (sweep + 1) % l_swap == 0:
-            # Propose swaps between adjacent replicas (random order)
-            for adj in rng.permutation(n_replicas - 1):
-                k1, k2 = int(adj), int(adj) + 1
-                lp1 = _log_unnorm(replicas[k1], n, edges, edge_theta,
-                                   singleton_theta, betas[k1])
-                lp2 = _log_unnorm(replicas[k2], n, edges, edge_theta,
-                                   singleton_theta, betas[k2])
-                lp1x = _log_unnorm(replicas[k1], n, edges, edge_theta,
-                                    singleton_theta, betas[k2])
-                lp2x = _log_unnorm(replicas[k2], n, edges, edge_theta,
-                                    singleton_theta, betas[k1])
-                log_acc = (lp1x + lp2x) - (lp1 + lp2)
-                n_swap_attempts += 1
-                if math.log(max(rng.random(), 1e-300)) < log_acc:
-                    replicas[k1], replicas[k2] = replicas[k2], replicas[k1]
-                    n_swap_accepted += 1
+            # Propose adjacent swaps in random order
+            adj = rng.permutation(n_replicas - 1)
+            for k in adj:
+                k, k2 = int(k), int(k) + 1
+                log_a = _swap_log_accept(probs, states[k], states[k2],
+                                          betas[k], betas[k2])
+                n_swap_prop += 1
+                if math.log(max(float(rng.random()), 1e-300)) < log_a:
+                    states[k], states[k2] = states[k2], states[k]
+                    n_swap_acc += 1
 
     # ── Sampling ──────────────────────────────────────────────────────────────
-    target_idx = n_replicas - 1   # beta=1 is the last (hottest = 1.0)
-    samples = []
-    n_collected = 0
-    sweep = 0
-    while n_collected < n_samples:
+    samples = np.empty(n_samples, dtype=int)
+    for i in range(n_samples):
         for k in range(n_replicas):
-            replicas[k] = gibbs_sweep(
-                replicas[k], n, edges, edge_theta, singleton_theta, betas[k], rng)
-        sweep += 1
-        if sweep % l_swap == 0:
-            for adj in rng.permutation(n_replicas - 1):
-                k1, k2 = int(adj), int(adj) + 1
-                lp1 = _log_unnorm(replicas[k1], n, edges, edge_theta,
-                                   singleton_theta, betas[k1])
-                lp2 = _log_unnorm(replicas[k2], n, edges, edge_theta,
-                                   singleton_theta, betas[k2])
-                lp1x = _log_unnorm(replicas[k1], n, edges, edge_theta,
-                                    singleton_theta, betas[k2])
-                lp2x = _log_unnorm(replicas[k2], n, edges, edge_theta,
-                                    singleton_theta, betas[k1])
-                log_acc = (lp1x + lp2x) - (lp1 + lp2)
-                n_swap_attempts += 1
-                if math.log(max(rng.random(), 1e-300)) < log_acc:
-                    replicas[k1], replicas[k2] = replicas[k2], replicas[k1]
-                    n_swap_accepted += 1
-        # record one sample per sweep from target replica
-        samples.append(replicas[target_idx][0])   # scalar = x_0
-        n_collected += 1
+            states[k] = _gibbs_sweep(states[k], n, probs, betas[k], rng)
+        # Swap every l_swap sweeps during sampling too
+        if (i + 1) % l_swap == 0:
+            adj = rng.permutation(n_replicas - 1)
+            for k in adj:
+                k, k2 = int(k), int(k) + 1
+                log_a = _swap_log_accept(probs, states[k], states[k2],
+                                          betas[k], betas[k2])
+                n_swap_prop += 1
+                if math.log(max(float(rng.random()), 1e-300)) < log_a:
+                    states[k], states[k2] = states[k2], states[k]
+                    n_swap_acc += 1
+        samples[i] = states[target_idx]
 
-    t_total = time.perf_counter() - t_start
-    swap_acc = n_swap_accepted / max(n_swap_attempts, 1)
-    return samples, swap_acc, t_total
+    t_total_s    = time.perf_counter() - t0
+    swap_acc_rate = float(n_swap_acc / max(1, n_swap_prop))
+
+    return samples, swap_acc_rate, t_total_s
 
 
-def run_e2(n_max: int = 99, n_replicas: int = K_REPLICAS):
-    instances = make_instance_list(n_max)
-    results = []
+def main():
+    parser = argparse.ArgumentParser(description="E2: Parallel Tempering Baseline")
+    parser.add_argument("--n-values",    default="8,10,12")
+    parser.add_argument("--seeds",       type=int, default=4,
+                        help="Number of seeds per (family, n) pair (default 4, matching ess_sweep)")
+    parser.add_argument("--families",    default=FAMILIES_DEFAULT)
+    parser.add_argument("--n-replicas",  type=int, default=K_REPLICAS)
+    parser.add_argument("--beta-min",    type=float, default=BETA_MIN)
+    parser.add_argument("--beta-max",    type=float, default=BETA_MAX)
+    parser.add_argument("--l-swap",      type=int, default=L_SWAP)
+    parser.add_argument("--burn-in",     type=int, default=BURN_IN)
+    parser.add_argument("--n-samples",   type=int, default=N_SAMPLES)
+    args = parser.parse_args()
 
-    # These will be filled after quantum ESS values are loaded
-    # (for now we just record PT ESS; ratios need quantum ESS from ess_sweep)
-    try:
-        with open("paper_table_metrics.json") as f:
-            ptm_data = json.load(f)
-        quantum_ess_map = {
-            r["instance_id"]: r["ess_quantum"]
-            for r in ptm_data.get("per_instance", [])
-            if "ess_quantum" in r and "instance_id" in r
-        }
-    except Exception:
-        quantum_ess_map = {}
+    n_values  = [int(x) for x in args.n_values.split(",")]
+    fam_order = [x.strip() for x in args.families.split(",") if x.strip()]
+    families  = family_registry()
 
-    print(f"Running E2 (Parallel Tempering, K={n_replicas}) on {len(instances)} instances ...")
+    rows = []
+    for fam_name in fam_order:
+        if fam_name not in families:
+            raise ValueError(f"Unknown family '{fam_name}'. Available: {list(families)}")
+        for n in n_values:
+            for seed in range(args.seeds):
+                label = f"{fam_name}_n{n}_seed{seed}"
+                print(f"  {label} ...", end=" ", flush=True)
 
-    for inst in instances:
-        iid = inst["instance_id"]
-        family = inst["family"]
-        n = inst["n"]
-        seed = inst["seed"]
-        print(f"  {iid} ...", end=" ", flush=True)
+                g      = families[fam_name](n, seed)
+                params = sample_mrf_params(g, seed=seed)
+                probs  = pairwise_probs_from_params(n, params)
 
-        n_, edges, edge_theta, singleton_theta = _make_mrf_graph(family, n, seed)
-        samples, swap_acc, t_total = run_parallel_tempering(
-            n_, edges, edge_theta, singleton_theta,
-            n_replicas=n_replicas,
-            beta_min=BETA_MIN, beta_max=BETA_MAX,
-            l_swap=L_SWAP, burn_in=BURN_IN, n_samples=N_SAMPLES,
-            seed=seed)
+                # Also compute the quantum ESS for this instance (for ratio)
+                rng_q = np.random.default_rng(seed * 100 + 99)
+                t_q0 = time.perf_counter()
+                q_idx    = rng_q.choice(len(probs), size=args.n_samples, p=probs)
+                t_quantum_s = time.perf_counter() - t_q0
+                q_series    = np.array([bin(int(x)).count("1") for x in q_idx], dtype=float)
+                ess_ratio_q = ess_ratio_from_series(q_series)
+                ess_q       = ess_ratio_q * args.n_samples
 
-        ess = compute_ess_from_series(samples)
-        ess_per_s = ess / t_total if t_total > 0 else float("inf")
+                # Run parallel tempering
+                pt_samples, swap_acc, t_pt_s = run_pt(
+                    probs, n,
+                    n_replicas=args.n_replicas,
+                    beta_min=args.beta_min,
+                    beta_max=args.beta_max,
+                    l_swap=args.l_swap,
+                    burn_in=args.burn_in,
+                    n_samples=args.n_samples,
+                    seed=seed + 77777,
+                )
 
-        # Compute quantum/PT ratio if quantum ESS available for this instance
-        q_ess = quantum_ess_map.get(iid, None)
-        ratio = (q_ess / ess) if (q_ess is not None and ess > 0) else None
+                pt_series    = np.array([bin(int(x)).count("1") for x in pt_samples], dtype=float)
+                ess_ratio_pt = ess_ratio_from_series(pt_series)
+                ess_pt       = ess_ratio_pt * args.n_samples
+                ess_per_s_pt = ess_pt / max(1e-12, t_pt_s)
 
-        results.append({
-            "instance_id":        iid,
-            "family":             family,
-            "n":                  n,
-            "ess":                round(ess, 4),
-            "t_total_s":          round(t_total, 4),
-            "ess_per_s":          round(ess_per_s, 4),
-            "swap_acceptance_mean": round(swap_acc, 4),
-            "ratio_quantum_over_pt": round(ratio, 4) if ratio is not None else None,
-        })
-        print(f"ESS={ess:.1f}  swap_acc={swap_acc:.2%}  t={t_total:.1f}s"
-              + (f"  ratio={ratio:.2f}" if ratio else ""))
+                # Quantum/PT ESS ratio (in sample-count space, matching ess_sweep convention)
+                ratio_q_over_pt = float(ess_q / max(1e-12, ess_pt))
+
+                print(
+                    f"Q ESS={ess_q:.1f}  PT ESS={ess_pt:.1f}  "
+                    f"Q/PT={ratio_q_over_pt:.2f}  swap_acc={swap_acc:.1%}  t_pt={t_pt_s:.1f}s"
+                )
+
+                rows.append({
+                    "instance_id":          label,
+                    "family":               fam_name,
+                    "n":                    n,
+                    "seed":                 seed,
+                    # Quantum reference (sampled fresh here for per-instance ratio)
+                    "ess_quantum":          round(float(ess_q), 4),
+                    "ess_ratio_quantum":    round(float(ess_ratio_q), 6),
+                    "t_quantum_sample_s":   round(float(t_quantum_s), 6),
+                    # Parallel tempering
+                    "ess_pt":               round(float(ess_pt), 4),
+                    "ess_ratio_pt":         round(float(ess_ratio_pt), 6),
+                    "t_total_s":            round(float(t_pt_s), 4),
+                    "ess_per_s_pt":         round(float(ess_per_s_pt), 4),
+                    "swap_acceptance_mean": round(float(swap_acc), 4),
+                    # Q/PT ratio
+                    "ratio_quantum_over_pt": round(float(ratio_q_over_pt), 4),
+                })
 
     # ── Summary ───────────────────────────────────────────────────────────────
-    ess_vals   = [r["ess"] for r in results]
-    ratio_vals = [r["ratio_quantum_over_pt"] for r in results
-                  if r["ratio_quantum_over_pt"] is not None]
-
-    summary: dict = {
-        "mean_ess_per_s":     round(float(np.mean([r["ess_per_s"] for r in results])), 4),
-        "mean_swap_acceptance": round(float(np.mean([r["swap_acceptance_mean"] for r in results])), 4),
+    ratios = [r["ratio_quantum_over_pt"] for r in rows]
+    summary = {
+        "n_instances":                     len(rows),
+        "ratio_quantum_over_pt_mean":      round(float(np.mean(ratios)), 4),
+        "ratio_quantum_over_pt_median":    round(float(np.median(ratios)), 4),
+        "ratio_quantum_over_pt_min":       round(float(np.min(ratios)), 4),
+        "ratio_quantum_over_pt_max":       round(float(np.max(ratios)), 4),
+        "mean_ess_per_s_pt":               round(float(np.mean([r["ess_per_s_pt"] for r in rows])), 4),
+        "mean_swap_acceptance":            round(float(np.mean([r["swap_acceptance_mean"] for r in rows])), 4),
+        "pre_registered_expected_range":   "[0.8, 1.5] (per revised_plan_v4.tex)",
     }
-    if ratio_vals:
-        summary.update({
-            "ratio_quantum_over_pt_mean":   round(float(np.mean(ratio_vals)), 4),
-            "ratio_quantum_over_pt_median": round(float(np.median(ratio_vals)), 4),
-            "ratio_quantum_over_pt_min":    round(float(np.min(ratio_vals)), 4),
-            "ratio_quantum_over_pt_max":    round(float(np.max(ratio_vals)), 4),
-        })
-    else:
-        summary.update({
-            "ratio_quantum_over_pt_mean":   None,
-            "ratio_quantum_over_pt_median": None,
-            "ratio_quantum_over_pt_min":    None,
-            "ratio_quantum_over_pt_max":    None,
-            "note": "Quantum ESS not found in paper_table_metrics.json; "
-                    "rerun after generating quantum ESS data.",
-        })
 
     out = {
-        "generated_utc":               datetime.datetime.utcnow().isoformat(),
-        "n_instances":                 len(results),
-        "n_replicas":                  n_replicas,
+        "generated_utc":               datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "n_replicas":                  args.n_replicas,
         "beta_schedule":               "geometric",
-        "beta_min":                    BETA_MIN,
-        "beta_max":                    BETA_MAX,
-        "swap_interval_sweeps":        L_SWAP,
-        "burn_in_per_replica_sweeps":  BURN_IN,
-        "samples_per_instance":        N_SAMPLES,
-        "per_instance":                results,
+        "beta_min":                    args.beta_min,
+        "beta_max":                    args.beta_max,
+        "swap_interval_sweeps":        args.l_swap,
+        "burn_in_per_replica_sweeps":  args.burn_in,
+        "n_samples_per_instance":      args.n_samples,
+        "scalar_observable":           "hamming_weight",
+        "ess_metric":                  "ess_ratio_from_series * n_samples  (matches run_ess_sweep.py)",
+        "per_instance":                rows,
         "summary":                     summary,
     }
 
-    os.makedirs("experiments/results", exist_ok=True)
-    out_path = "experiments/results/parallel_tempering_baseline.json"
-    with open(out_path, "w") as f:
+    out_dir  = os.path.join(os.path.dirname(__file__), "results")
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "parallel_tempering_baseline.json")
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)
 
     print(f"\n[E2] Done. Wrote {out_path}")
-    if ratio_vals:
-        print(f"     Quantum/PT ratio: mean={summary['ratio_quantum_over_pt_mean']:.3f}  "
-              f"median={summary['ratio_quantum_over_pt_median']:.3f}  "
-              f"range=[{summary['ratio_quantum_over_pt_min']:.3f}, "
-              f"{summary['ratio_quantum_over_pt_max']:.3f}]")
-    return out
+    print(f"     Quantum/PT ratio: mean={summary['ratio_quantum_over_pt_mean']:.3f}  "
+          f"median={summary['ratio_quantum_over_pt_median']:.3f}  "
+          f"range=[{summary['ratio_quantum_over_pt_min']:.3f}, {summary['ratio_quantum_over_pt_max']:.3f}]")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="E2: Parallel Tempering Baseline")
-    parser.add_argument("--n_max", type=int, default=99,
-                        help="Skip instances with n > n_max (for quick test)")
-    parser.add_argument("--n_replicas", type=int, default=K_REPLICAS,
-                        help=f"Number of PT replicas (default {K_REPLICAS})")
-    args = parser.parse_args()
-    run_e2(n_max=args.n_max, n_replicas=args.n_replicas)
+    main()

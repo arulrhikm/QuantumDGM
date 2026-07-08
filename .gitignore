@@ -163,3 +163,16 @@ logs/
 *.bak
 *.orig
 
+# Manuscript, planning, and peer-review material — keep local only, never publish
+paper.tex
+paper.pdf
+paper_table_metrics.json
+revised_plan.tex
+revised_plan_v2.tex
+revised_plan_v3.tex
+revised_plan_v4.tex
+docs/revised_plan_spec.json
+docs/revised_plan_traceability.md
+response_to_reviewers.md
+reviews.txt
+

@@ -172,9 +172,10 @@ def main():
                 b_series = np.array([bin(x).count("1") for x in b_idx], dtype=float)
                 t_block_gibbs_s = time.perf_counter() - t2
 
-                ess_q = ess_ratio_from_series(q_series)
-                ess_g = ess_ratio_from_series(g_series)
-                ess_b = ess_ratio_from_series(b_series)
+                # ess_ratio_from_series returns ESS/N; scale to absolute ESS so ESS/s is in samples/s.
+                ess_q = ess_ratio_from_series(q_series) * len(q_series)
+                ess_g = ess_ratio_from_series(g_series) * len(g_series)
+                ess_b = ess_ratio_from_series(b_series) * len(b_series)
 
                 ess_t = None
                 t_tuned_gibbs_s = None
@@ -185,7 +186,7 @@ def main():
                     t_idx = block_gibbs_tuned_sample_from_exact(probs, g, n, n_samples=3000, burn_in=1000)
                     t_series = np.array([bin(x).count("1") for x in t_idx], dtype=float)
                     t_tuned_gibbs_s = time.perf_counter() - t3
-                    ess_t = ess_ratio_from_series(t_series)
+                    ess_t = ess_ratio_from_series(t_series) * len(t_series)
                     eps_t = float(ess_t / max(1e-8, t_tuned_gibbs_s))
                     ratio_tuned = float(ess_q / max(1e-8, ess_t))
 

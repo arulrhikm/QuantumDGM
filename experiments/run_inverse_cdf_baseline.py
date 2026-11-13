@@ -1,7 +1,7 @@
 """
 experiments/run_inverse_cdf_baseline.py
 =======================================
-E1 — Exact Inverse-CDF Baseline  (Experiment E1 from revised_plan_v4.tex)
+E1 — Exact Inverse-CDF Baseline
 
 This script uses the IDENTICAL instance-generation pipeline as run_ess_sweep.py:
   - graph_families.family_registry() + sample_mrf_params()

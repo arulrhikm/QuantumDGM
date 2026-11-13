@@ -1,2 +1,2 @@
-"""Core experiment architecture for revised plan execution."""
+"""Amplitude encoding, variational circuits, backends and metrics for the MRF sampling experiments."""
 

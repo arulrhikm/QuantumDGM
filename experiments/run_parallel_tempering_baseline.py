@@ -1,7 +1,7 @@
 """
 experiments/run_parallel_tempering_baseline.py
 ===============================================
-E2 — Parallel Tempering Baseline  (Experiment E2 from revised_plan_v4.tex)
+E2 — Parallel Tempering Baseline
 
 This script uses the IDENTICAL instance-generation pipeline as run_ess_sweep.py:
   - graph_families.family_registry() + sample_mrf_params()
@@ -14,8 +14,8 @@ giving O(2^n) per site update — consistent with the single-site Gibbs baseline
 
 The scalar observable is Hamming weight (bin(x).count("1")), matching ess_sweep.
 
-Protocol (from revised_plan_v4.tex §2.2)
------------------------------------------
+Protocol (as in the paper)
+--------------------------
   K = 8 replicas, geometric beta ladder in [beta_min=0.1, beta_max=1.0]
   Replica swap proposals every L_swap = 10 within-replica sweeps (Metropolis)
   Burn-in: 1000 within-replica sweeps per replica
@@ -281,7 +281,7 @@ def main():
         "ratio_quantum_over_pt_max":       round(float(np.max(ratios)), 4),
         "mean_ess_per_s_pt":               round(float(np.mean([r["ess_per_s_pt"] for r in rows])), 4),
         "mean_swap_acceptance":            round(float(np.mean([r["swap_acceptance_mean"] for r in rows])), 4),
-        "pre_registered_expected_range":   "[0.8, 1.5] (per revised_plan_v4.tex)",
+        "pre_registered_expected_range":   "[0.8, 1.5]",
     }
 
     out = {

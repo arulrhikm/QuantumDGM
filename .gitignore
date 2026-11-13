@@ -163,7 +163,7 @@ logs/
 *.bak
 *.orig
 
-# Manuscript, planning, and peer-review material — keep local only, never publish
+# Local working files, not part of the artifact
 paper.tex
 paper.pdf
 paper_table_metrics.json
